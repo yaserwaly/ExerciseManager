@@ -1,0 +1,18 @@
+# ===== Personal user data: NEVER commit =====
+/workspace/
+/courses/
+/shared/
+*.exercise.json
+
+# ===== Generated documentation =====
+/docs/output/
+
+# ===== Visual Studio / build output =====
+.vs/
+x64/
+Debug/
+Release/
+/bin/
+/obj/
+/packages/
+*.user
