@@ -1,0 +1,9 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="src/ExerciseManager.App/ExerciseManager.App.vcxproj" Id="0501423c-8113-40b7-8d2d-42f3792d44ca" />
+  <Project Path="src/ExerciseManager.Core/ExerciseManager.Core.vcxproj" Id="302660e9-30e9-4ade-85c8-3fc3a1d8845a" />
+  <Project Path="tests/ExerciseManager.Tests/ExerciseManager.Tests.vcxproj" Id="2e33071c-8a8c-443e-b18a-ff38caef39ed" />
+</Solution>
