@@ -15,7 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ExerciseManager.Tests.cpp">
+    <ClCompile Include="NameValidatorTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PathGuardTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
