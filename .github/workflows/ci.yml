@@ -23,10 +23,47 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Build and stage GoogleTest (x64 ${{ matrix.config }})
+        shell: pwsh
+        run: |
+          $cfg = "${{ matrix.config }}"
+          $src = Join-Path $env:RUNNER_TEMP "googletest-src"
+          $build = Join-Path $src "out\build\x64-$cfg"
+          $runtime = if ($cfg -eq "Debug") { "MultiThreadedDebugDLL" } else { "MultiThreadedDLL" }
+
+          git clone --depth 1 https://github.com/google/googletest.git $src
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          cmake --version
+          cmake -A x64 -S $src -B $build `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY="$runtime" `
+            -DBUILD_GMOCK=ON -DBUILD_SHARED_LIBS=OFF -Dgtest_force_shared_crt=ON
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          cmake --build $build --config $cfg
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          # Stage headers and libs at the same paths used on the local machine
+          $incGtest = "C:\googletest\googletest\include"
+          $incGmock = "C:\googletest\googlemock\include"
+          $libDir   = "C:\googletest\out\build\x64-$cfg\lib"
+          New-Item -ItemType Directory -Force -Path $incGtest, $incGmock, $libDir | Out-Null
+          Copy-Item -Recurse -Force "$src\googletest\include\*" $incGtest
+          Copy-Item -Recurse -Force "$src\googlemock\include\*" $incGmock
+          Get-ChildItem -Path $build -Recurse -Filter *.lib | ForEach-Object { Copy-Item -Force $_.FullName $libDir }
+
+          Get-ChildItem $libDir
+
       - name: Build solution (x64 ${{ matrix.config }})
         shell: pwsh
         run: |
           msbuild ExerciseManager.slnx /p:Configuration=${{ matrix.config }} /p:Platform=x64 /m /fl "/flp:logfile=msbuild_${{ matrix.config }}.log;verbosity=normal"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run tests (x64 ${{ matrix.config }})
+        shell: pwsh
+        run: |
+          & ".\bin\x64\${{ matrix.config }}\ExerciseManager.Tests\ExerciseManager.Tests.exe"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload msbuild log on failure
