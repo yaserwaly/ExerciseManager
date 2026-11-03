@@ -25,11 +25,13 @@
     <ClInclude Include="include\exercise_manager\FileNaming.h" />
     <ClInclude Include="include\exercise_manager\NameValidator.h" />
     <ClInclude Include="include\exercise_manager\PathGuard.h" />
+    <ClInclude Include="include\exercise_manager\Workspace.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\FileNaming.cpp" />
     <ClCompile Include="src\NameValidator.cpp" />
     <ClCompile Include="src\PathGuard.cpp" />
+    <ClCompile Include="src\Workspace.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>

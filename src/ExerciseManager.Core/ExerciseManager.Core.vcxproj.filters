@@ -33,6 +33,9 @@
     <ClInclude Include="include\exercise_manager\FileNaming.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\exercise_manager\Workspace.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\NameValidator.cpp">
@@ -42,6 +45,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\FileNaming.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Workspace.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
