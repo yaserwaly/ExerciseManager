@@ -1,0 +1,25 @@
+# Normalize line endings: Git decides, files are checked out as native
+* text=auto
+
+# Source files
+*.cpp text
+*.h text
+*.hpp text
+*.md text
+*.json text
+*.yml text
+*.tpl text
+
+# Visual Studio files (Windows line endings)
+*.sln text eol=crlf
+*.slnx text eol=crlf
+*.vcxproj text eol=crlf
+*.filters text eol=crlf
+*.props text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.exe binary
+*.lib binary
+*.pdb binary
