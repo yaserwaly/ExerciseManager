@@ -19,11 +19,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\exercise_manager\Course.h" />
     <ClInclude Include="include\exercise_manager\Errors.h" />
+    <ClInclude Include="include\exercise_manager\Exercise.h" />
+    <ClInclude Include="include\exercise_manager\FileNaming.h" />
     <ClInclude Include="include\exercise_manager\NameValidator.h" />
     <ClInclude Include="include\exercise_manager\PathGuard.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\FileNaming.cpp" />
     <ClCompile Include="src\NameValidator.cpp" />
     <ClCompile Include="src\PathGuard.cpp" />
   </ItemGroup>

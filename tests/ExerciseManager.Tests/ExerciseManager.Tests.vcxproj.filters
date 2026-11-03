@@ -21,5 +21,8 @@
     <ClCompile Include="PathGuardTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FileNamingTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
