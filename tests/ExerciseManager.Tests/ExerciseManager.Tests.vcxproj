@@ -154,6 +154,7 @@
     <ClCompile Include="FileNamingTests.cpp" />
     <ClCompile Include="NameValidatorTests.cpp" />
     <ClCompile Include="PathGuardTests.cpp" />
+    <ClCompile Include="WorkspaceTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\ExerciseManager.Core\ExerciseManager.Core.vcxproj">
