@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug, Release]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build solution (x64 ${{ matrix.config }})
+        shell: pwsh
+        run: |
+          msbuild ExerciseManager.slnx /p:Configuration=${{ matrix.config }} /p:Platform=x64 /m /fl "/flp:logfile=msbuild_${{ matrix.config }}.log;verbosity=normal"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload msbuild log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msbuild-log-${{ matrix.config }}
+          path: msbuild_${{ matrix.config }}.log
+
+  privacy-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fail if personal data is tracked
+        shell: bash
+        run: |
+          bad=$(git ls-files | grep -E '^(shared|courses|workspace)/|\.exercise\.json$' || true)
+          if [ -n "$bad" ]; then
+            echo "Personal data found in the repository:"
+            echo "$bad"
+            exit 1
+          fi
+          echo "Privacy guard passed."
