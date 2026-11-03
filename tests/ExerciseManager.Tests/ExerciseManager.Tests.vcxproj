@@ -151,6 +151,7 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="FileNamingTests.cpp" />
     <ClCompile Include="NameValidatorTests.cpp" />
     <ClCompile Include="PathGuardTests.cpp" />
   </ItemGroup>
