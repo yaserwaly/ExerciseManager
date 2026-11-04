@@ -152,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="FileNamingTests.cpp" />
+    <ClCompile Include="JsonCourseRepositoryTests.cpp" />
     <ClCompile Include="NameValidatorTests.cpp" />
     <ClCompile Include="PathGuardTests.cpp" />
     <ClCompile Include="WorkspaceTests.cpp" />
