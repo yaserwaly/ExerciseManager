@@ -88,8 +88,8 @@ TEST_F(WorkspaceTests, FoldersAreInsideTheRoot)
 TEST_F(WorkspaceTests, BuildsCourseFolderAndFilePaths)
 {
     const Workspace workspace(m_root);
-    EXPECT_EQ(workspace.courseDir(1), workspace.root() / "courses" / "c01");
-    EXPECT_EQ(workspace.courseFile(10), workspace.root() / "courses" / "c10" / "course.json");
+    EXPECT_EQ(workspace.courseDir(1), workspace.root() / "courses" / "Course01");
+    EXPECT_EQ(workspace.courseFile(10), workspace.root() / "courses" / "Course10" / "course.json");
 }
 
 TEST_F(WorkspaceTests, RejectsCourseNumberOutOfRange)

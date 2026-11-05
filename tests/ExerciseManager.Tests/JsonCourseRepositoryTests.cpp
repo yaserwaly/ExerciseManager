@@ -171,7 +171,7 @@ TEST_F(JsonCourseRepositoryTests, ListCourseIdsReturnsSortedIds)
 TEST_F(JsonCourseRepositoryTests, ListCourseIdsIgnoresFoldersWithoutCourseFile)
 {
     m_repository->save(makeCourse(1));
-    fs::create_directories(m_workspace->coursesDir() / "c02");
+    fs::create_directories(m_workspace->coursesDir() / "Course02");
     fs::create_directories(m_workspace->coursesDir() / "notacourse");
 
     const std::vector<int> ids = m_repository->listCourseIds();
