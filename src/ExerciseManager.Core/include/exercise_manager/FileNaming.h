@@ -15,7 +15,10 @@ class FileNaming
 {
 public:
     /// @brief Fixed prefix placed before the exercise number. Changed in one place only.
-    static constexpr std::string_view kFilePrefix = "Problem";
+    static constexpr std::string_view kFilePrefix = "Exercise";
+
+    /// @brief Fixed prefix of a course folder name, e.g. `Course01`.
+    static constexpr std::string_view kCourseFolderPrefix = "Course";
 
     /// @brief Largest allowed course number (two digits in the file name).
     static constexpr int kMaxCourseId = 99;
@@ -39,8 +42,8 @@ public:
     /// @brief Folder name of a course, e.g. `c02`.
     static std::string courseFolderName(int courseId);
 
-    /// @brief Class name used inside the generated code, e.g. `clsProblem013`.
-    static std::string className(int exerciseNumber);
+    /// @brief Class name used inside the generated code, e.g. `ClsC01Exercise001`.
+    static std::string className(int courseId, int exerciseNumber);
 };
 
 } // namespace exercise_manager

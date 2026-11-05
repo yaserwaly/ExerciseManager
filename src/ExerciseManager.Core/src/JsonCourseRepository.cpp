@@ -1,6 +1,7 @@
 #include "exercise_manager/JsonCourseRepository.h"
 
 #include "exercise_manager/Errors.h"
+#include "exercise_manager/FileNaming.h"
 
 #include <nlohmann/json.hpp>
 
@@ -9,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <string_view>
 #include <system_error>
 
 namespace exercise_manager
@@ -193,20 +195,22 @@ std::vector<int> JsonCourseRepository::listCourseIds() const
         return ids;
     }
 
+    constexpr std::string_view prefix = FileNaming::kCourseFolderPrefix;
+
     for (const fs::directory_entry& entry : fs::directory_iterator(m_workspace.coursesDir(), ec))
     {
         const std::string name = entry.path().filename().string();
 
-        // Folder names look like "c01": a 'c' followed by digits only.
-        if (name.size() < 2 || name[0] != 'c' ||
-            !std::all_of(name.begin() + 1, name.end(),
+        // Folder names look like "Course01": the prefix followed by exactly two digits.
+        if (name.size() != prefix.size() + 2 || name.compare(0, prefix.size(), prefix) != 0 ||
+            !std::all_of(name.begin() + prefix.size(), name.end(),
                          [](unsigned char ch) { return std::isdigit(ch) != 0; }))
         {
             continue;
         }
 
-        const int id = std::stoi(name.substr(1));
-        if (exists(id))
+        const int id = std::stoi(name.substr(prefix.size()));
+        if (id >= 1 && exists(id))
         {
             ids.push_back(id);
         }

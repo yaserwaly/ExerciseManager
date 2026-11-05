@@ -31,14 +31,14 @@ void checkExerciseNumber(int exerciseNumber)
 std::string FileNaming::courseFolderName(int courseId)
 {
     checkCourseId(courseId);
-    return std::format("c{:02}", courseId);
+    return std::format("{}{:02}", kCourseFolderPrefix, courseId);
 }
 
 std::string FileNaming::baseName(int courseId, int exerciseNumber)
 {
     checkCourseId(courseId);
     checkExerciseNumber(exerciseNumber);
-    return std::format("c{:02}{}{:03}", courseId, kFilePrefix, exerciseNumber);
+    return std::format("C{:02}{}{:03}", courseId, kFilePrefix, exerciseNumber);
 }
 
 std::string FileNaming::headerFileName(int courseId, int exerciseNumber)
@@ -51,10 +51,9 @@ std::string FileNaming::sourceFileName(int courseId, int exerciseNumber)
     return baseName(courseId, exerciseNumber) + ".cpp";
 }
 
-std::string FileNaming::className(int exerciseNumber)
+std::string FileNaming::className(int courseId, int exerciseNumber)
 {
-    checkExerciseNumber(exerciseNumber);
-    return std::format("cls{}{:03}", kFilePrefix, exerciseNumber);
+    return "Cls" + baseName(courseId, exerciseNumber);
 }
 
 } // namespace exercise_manager
