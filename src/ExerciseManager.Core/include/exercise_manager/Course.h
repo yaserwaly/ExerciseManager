@@ -20,9 +20,6 @@ struct Course
     /// @brief Display name of the course.
     std::string name;
 
-    /// @brief Number given to the next exercise. Numbers of deleted exercises are never reused.
-    int nextExerciseNumber = 1;
-
     /// @brief The exercises of this course.
     std::vector<Exercise> exercises;
 

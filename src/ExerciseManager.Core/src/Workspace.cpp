@@ -103,11 +103,6 @@ fs::path Workspace::courseDir(int courseId) const
     return coursesDir() / FileNaming::courseFolderName(courseId);
 }
 
-fs::path Workspace::courseFile(int courseId) const
-{
-    return courseDir(courseId) / kCourseFileName;
-}
-
 fs::path Workspace::coursesFile() const
 {
     return coursesDir() / kCoursesFileName;

@@ -32,9 +32,6 @@ public:
     static constexpr const char* kDeletedFolder = "_deleted";
     static constexpr const char* kBuildFolder = "build";
 
-    /// @brief File name of the course data file inside a course folder.
-    static constexpr const char* kCourseFileName = "Course.json";
-
     /// @brief File name of the list of all courses, inside the Courses folder.
     static constexpr const char* kCoursesFileName = "Courses.json";
 
@@ -72,10 +69,6 @@ public:
     /// @brief Folder of one course, e.g. `<workspace>/courses/c01`.
     /// @throws InvalidExerciseNameError if the course number is out of range.
     std::filesystem::path courseDir(int courseId) const;
-
-    /// @brief Data file of one course, e.g. `<workspace>/courses/c01/course.json`.
-    /// @throws InvalidExerciseNameError if the course number is out of range.
-    std::filesystem::path courseFile(int courseId) const;
 
     /// @brief File that lists all courses, e.g. `<workspace>/Courses/Courses.json`.
     std::filesystem::path coursesFile() const;

@@ -85,24 +85,24 @@ TEST_F(WorkspaceTests, FoldersAreInsideTheRoot)
     EXPECT_EQ(workspace.buildDir(), workspace.root() / "build");
 }
 
-TEST_F(WorkspaceTests, BuildsCourseFolderAndFilePaths)
+TEST_F(WorkspaceTests, BuildsCourseFolderPath)
 {
     const Workspace workspace(m_root);
     EXPECT_EQ(workspace.courseDir(1), workspace.root() / "Courses" / "Course01");
-    EXPECT_EQ(workspace.courseFile(10), workspace.root() / "Courses" / "Course10" / "Course.json");
+    EXPECT_EQ(workspace.courseDir(10), workspace.root() / "Courses" / "Course10");
 }
 
 TEST_F(WorkspaceTests, RejectsCourseNumberOutOfRange)
 {
     const Workspace workspace(m_root);
     EXPECT_THROW(workspace.courseDir(0), InvalidExerciseNameError);
-    EXPECT_THROW(workspace.courseFile(100), InvalidExerciseNameError);
+    EXPECT_THROW(workspace.exercisesFile(100), InvalidExerciseNameError);
 }
 
 TEST_F(WorkspaceTests, GuardAcceptsCoursePathsAndRejectsOutsidePaths)
 {
     const Workspace workspace(m_root);
-    EXPECT_NO_THROW(workspace.guard().ensureInside(workspace.courseFile(1)));
+    EXPECT_NO_THROW(workspace.guard().ensureInside(workspace.exercisesFile(1)));
     EXPECT_THROW(workspace.guard().ensureInside("../outside.txt"), WorkspaceError);
 }
 
