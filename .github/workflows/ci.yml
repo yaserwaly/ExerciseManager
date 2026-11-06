@@ -82,7 +82,7 @@ jobs:
       - name: Fail if personal data is tracked
         shell: bash
         run: |
-          bad=$(git ls-files | grep -E '^(shared|courses|workspace)/|\.exercise\.json$' || true)
+          bad=$(git ls-files | grep -iE '^(shared|courses|workspace)/|\.exercise\.json$' || true)
           if [ -n "$bad" ]; then
             echo "Personal data found in the repository:"
             echo "$bad"

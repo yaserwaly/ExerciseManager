@@ -8,20 +8,31 @@
 namespace exercise_manager
 {
 
-/// @brief Stores each course as a JSON file (`course.json`) inside the workspace.
+/// @brief Stores courses as JSON files inside the workspace.
 ///
-/// File format (version 1):
+/// `Courses/Courses.json` lists all courses (schema version 1):
 /// @code
 /// {
 ///   "schema_version": 1,
-///   "course": { "id": 1, "name": "C++ Basics" },
-///   "next_exercise_number": 4,
-///   "exercises": [ { "number": 1, "name": "adder", "description": "Add two numbers" } ]
+///   "courses": [ { "id": 1, "name": "C++ Basics", "description": "...", "full_description": "..." } ]
 /// }
 /// @endcode
 ///
-/// Writing is safe: the data goes to a temporary file first, which then replaces
-/// the real file, so a crash in the middle never corrupts an existing course.
+/// `Courses/Course01/Exercises.json` lists the exercises of one course:
+/// @code
+/// {
+///   "schema_version": 1,
+///   "course_id": 1,
+///   "exercises": [
+///     { "number": 1, "name": "adder", "description": "...", "full_description": "..." }
+///   ]
+/// }
+/// @endcode
+///
+/// Writing is safe: data goes to a temporary file first, which then replaces the
+/// real file. The exercises file is written before Courses.json, so a crash in
+/// the middle leaves the course unlisted instead of corrupting anything.
+
 class JsonCourseRepository : public ICourseRepository
 {
 public:

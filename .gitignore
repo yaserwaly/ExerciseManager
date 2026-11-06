@@ -1,6 +1,7 @@
 # ===== Personal user data: NEVER commit =====
 /workspace/
 /courses/
+/Courses/
 /shared/
 *.exercise.json
 

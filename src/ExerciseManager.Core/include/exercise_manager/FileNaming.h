@@ -10,7 +10,7 @@ namespace exercise_manager
 ///
 /// Names come from numbers only, never from the user's text, so a name can
 /// never break a path or an `#include`. Example: course 1, exercise 1 gives
-/// `c01Problem001`.
+/// `C01Exercise001`.
 class FileNaming
 {
 public:
@@ -26,20 +26,20 @@ public:
     /// @brief Largest allowed exercise number (three digits in the file name).
     static constexpr int kMaxExerciseNumber = 999;
 
-    /// @brief Base name of an exercise: `c{course:02}{Prefix}{number:03}`.
+    /// @brief Base name of an exercise: `C{course:02}{Prefix}{number:03}`.
     /// @param courseId Course number (1..kMaxCourseId).
     /// @param exerciseNumber Exercise number (1..kMaxExerciseNumber).
-    /// @return For example `c02Problem013`.
+    /// @return For example `C02Exercise013`.
     /// @throws InvalidExerciseNameError if a number is out of range.
     static std::string baseName(int courseId, int exerciseNumber);
 
-    /// @brief Header file name, e.g. `c02Problem013.hpp`.
+    /// @brief Header file name, e.g. `C02Exercise013.hpp`.
     static std::string headerFileName(int courseId, int exerciseNumber);
 
-    /// @brief Source file name, e.g. `c02Problem013.cpp`.
+    /// @brief Source file name, e.g. `C02Exercise013.cpp`.
     static std::string sourceFileName(int courseId, int exerciseNumber);
 
-    /// @brief Folder name of a course, e.g. `c02`.
+    /// @brief Folder name of a course, e.g. `Course02`.
     static std::string courseFolderName(int courseId);
 
     /// @brief Class name used inside the generated code, e.g. `ClsC01Exercise001`.

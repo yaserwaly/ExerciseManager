@@ -6,19 +6,25 @@
 
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace fs = std::filesystem;
 
 using exercise_manager::Course;
 using exercise_manager::CourseNotFoundError;
 using exercise_manager::Exercise;
+using exercise_manager::InvalidExerciseNameError;
 using exercise_manager::JsonCourseRepository;
 using exercise_manager::StorageError;
 using exercise_manager::Workspace;
 
 namespace
 {
+
+const char* const kValidCoursesJson =
+    R"({"schema_version":1,"courses":[{"id":1,"name":"x","description":"y","full_description":"z"}]})";
 
 // Creates a fresh temporary workspace and deletes it when the test ends.
 class JsonCourseRepositoryTests : public ::testing::Test
@@ -46,16 +52,18 @@ class JsonCourseRepositoryTests : public ::testing::Test
         Course course;
         course.id = id;
         course.name = "C++ Basics";
-        course.nextExerciseNumber = 4;
-        course.exercises.push_back(Exercise{1, "adder", "Add two numbers"});
-        course.exercises.push_back(Exercise{3, "جمع رقمين", "وصف بالعربي"});
+        course.description = "Basics of C++";
+        course.fullDescription = "Basics of C++: variables, loops and functions";
+        course.exercises.push_back(
+            Exercise{1, "adder", "Add two numbers", "Adds two numbers and prints the sum"});
+        course.exercises.push_back(Exercise{3, "جمع رقمين", "وصف بالعربي", "وصف كامل بالعربي"});
         return course;
     }
 
-    void writeRawCourseFile(int id, const std::string& text)
+    static void writeRawFile(const fs::path& file, const std::string& text)
     {
-        fs::create_directories(m_workspace->courseDir(id));
-        std::ofstream out(m_workspace->courseFile(id), std::ios::binary);
+        fs::create_directories(file.parent_path());
+        std::ofstream out(file, std::ios::binary);
         out << text;
     }
 
@@ -78,31 +86,38 @@ TEST_F(JsonCourseRepositoryTests, SaveThenLoadReturnsSameData)
     const Course loaded = m_repository->load(1);
     EXPECT_EQ(loaded.id, 1);
     EXPECT_EQ(loaded.name, "C++ Basics");
-    EXPECT_EQ(loaded.nextExerciseNumber, 4);
+    EXPECT_EQ(loaded.description, "Basics of C++");
+    EXPECT_EQ(loaded.fullDescription, "Basics of C++: variables, loops and functions");
     ASSERT_EQ(loaded.exercises.size(), 2u);
     EXPECT_EQ(loaded.exercises[0].number, 1);
     EXPECT_EQ(loaded.exercises[0].name, "adder");
     EXPECT_EQ(loaded.exercises[0].description, "Add two numbers");
+    EXPECT_EQ(loaded.exercises[0].fullDescription, "Adds two numbers and prints the sum");
     EXPECT_EQ(loaded.exercises[1].number, 3);
     EXPECT_EQ(loaded.exercises[1].name, "جمع رقمين");
     EXPECT_EQ(loaded.exercises[1].description, "وصف بالعربي");
+    EXPECT_EQ(loaded.exercises[1].fullDescription, "وصف كامل بالعربي");
 }
 
-TEST_F(JsonCourseRepositoryTests, SaveCreatesCourseFile)
+TEST_F(JsonCourseRepositoryTests, SaveCreatesCoursesFileAndExercisesFile)
 {
     m_repository->save(makeCourse(2));
 
     EXPECT_TRUE(m_repository->exists(2));
-    EXPECT_TRUE(fs::is_regular_file(m_workspace->courseFile(2)));
+    EXPECT_TRUE(fs::is_regular_file(m_workspace->coursesFile()));
+    EXPECT_TRUE(fs::is_regular_file(m_workspace->exercisesFile(2)));
 }
 
 TEST_F(JsonCourseRepositoryTests, SaveLeavesNoTemporaryFile)
 {
     m_repository->save(makeCourse(1));
 
-    fs::path temp = m_workspace->courseFile(1);
-    temp += ".tmp";
-    EXPECT_FALSE(fs::exists(temp));
+    fs::path tempCourses = m_workspace->coursesFile();
+    tempCourses += ".tmp";
+    fs::path tempExercises = m_workspace->exercisesFile(1);
+    tempExercises += ".tmp";
+    EXPECT_FALSE(fs::exists(tempCourses));
+    EXPECT_FALSE(fs::exists(tempExercises));
 }
 
 TEST_F(JsonCourseRepositoryTests, SaveOverwritesExistingCourse)
@@ -119,34 +134,86 @@ TEST_F(JsonCourseRepositoryTests, SaveOverwritesExistingCourse)
     EXPECT_TRUE(loaded.exercises.empty());
 }
 
+TEST_F(JsonCourseRepositoryTests, SaveKeepsOtherCourses)
+{
+    m_repository->save(makeCourse(1));
+    m_repository->save(makeCourse(2));
+
+    Course changed = makeCourse(1);
+    changed.name = "Renamed";
+    m_repository->save(changed);
+
+    EXPECT_EQ(m_repository->load(1).name, "Renamed");
+    EXPECT_EQ(m_repository->load(2).name, "C++ Basics");
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{1, 2}));
+}
+
+TEST_F(JsonCourseRepositoryTests, SaveRejectsCourseNumberOutOfRange)
+{
+    EXPECT_THROW(m_repository->save(makeCourse(0)), InvalidExerciseNameError);
+    EXPECT_FALSE(fs::exists(m_workspace->coursesFile()));
+}
+
 TEST_F(JsonCourseRepositoryTests, LoadMissingCourseThrowsCourseNotFound)
 {
     EXPECT_THROW(m_repository->load(5), CourseNotFoundError);
 }
 
-TEST_F(JsonCourseRepositoryTests, LoadInvalidJsonThrowsStorageError)
+TEST_F(JsonCourseRepositoryTests, LoadInvalidCoursesJsonThrowsStorageError)
 {
-    writeRawCourseFile(1, "this is not json");
+    writeRawFile(m_workspace->coursesFile(), "this is not json");
     EXPECT_THROW(m_repository->load(1), StorageError);
 }
 
-TEST_F(JsonCourseRepositoryTests, LoadMissingFieldThrowsStorageError)
+TEST_F(JsonCourseRepositoryTests, LoadCoursesMissingFieldThrowsStorageError)
 {
-    writeRawCourseFile(1, R"({"schema_version":1,"course":{"id":1,"name":"x"},"exercises":[]})");
+    writeRawFile(m_workspace->coursesFile(),
+                 R"({"schema_version":1,"courses":[{"id":1,"name":"x","description":"y"}]})");
     EXPECT_THROW(m_repository->load(1), StorageError);
 }
 
-TEST_F(JsonCourseRepositoryTests, LoadUnsupportedSchemaVersionThrowsStorageError)
+TEST_F(JsonCourseRepositoryTests, LoadCoursesUnsupportedSchemaVersionThrowsStorageError)
 {
-    writeRawCourseFile(
-        1, R"({"schema_version":99,"course":{"id":1,"name":"x"},"next_exercise_number":1,"exercises":[]})");
+    writeRawFile(m_workspace->coursesFile(), R"({"schema_version":99,"courses":[]})");
     EXPECT_THROW(m_repository->load(1), StorageError);
 }
 
-TEST_F(JsonCourseRepositoryTests, LoadCourseThatDoesNotMatchFolderThrowsStorageError)
+TEST_F(JsonCourseRepositoryTests, LoadCoursesWithDuplicateIdsThrowsStorageError)
 {
-    writeRawCourseFile(
-        1, R"({"schema_version":1,"course":{"id":2,"name":"x"},"next_exercise_number":1,"exercises":[]})");
+    writeRawFile(m_workspace->coursesFile(),
+                 R"({"schema_version":1,"courses":[)"
+                 R"({"id":1,"name":"a","description":"a","full_description":"a"},)"
+                 R"({"id":1,"name":"b","description":"b","full_description":"b"}]})");
+    EXPECT_THROW(m_repository->load(1), StorageError);
+}
+
+TEST_F(JsonCourseRepositoryTests, LoadMissingExercisesFileThrowsStorageError)
+{
+    writeRawFile(m_workspace->coursesFile(), kValidCoursesJson);
+    EXPECT_THROW(m_repository->load(1), StorageError);
+}
+
+TEST_F(JsonCourseRepositoryTests, LoadInvalidExercisesJsonThrowsStorageError)
+{
+    writeRawFile(m_workspace->coursesFile(), kValidCoursesJson);
+    writeRawFile(m_workspace->exercisesFile(1), "this is not json");
+    EXPECT_THROW(m_repository->load(1), StorageError);
+}
+
+TEST_F(JsonCourseRepositoryTests, LoadExercisesMissingFieldThrowsStorageError)
+{
+    writeRawFile(m_workspace->coursesFile(), kValidCoursesJson);
+    writeRawFile(m_workspace->exercisesFile(1),
+                 R"({"schema_version":1,"course_id":1,)"
+                 R"("exercises":[{"number":1,"name":"a","description":"b"}]})");
+    EXPECT_THROW(m_repository->load(1), StorageError);
+}
+
+TEST_F(JsonCourseRepositoryTests, LoadExercisesThatDoNotMatchFolderThrowsStorageError)
+{
+    writeRawFile(m_workspace->coursesFile(), kValidCoursesJson);
+    writeRawFile(m_workspace->exercisesFile(1),
+                 R"({"schema_version":1,"course_id":2,"exercises":[]})");
     EXPECT_THROW(m_repository->load(1), StorageError);
 }
 
@@ -168,7 +235,7 @@ TEST_F(JsonCourseRepositoryTests, ListCourseIdsReturnsSortedIds)
     EXPECT_EQ(ids[2], 10);
 }
 
-TEST_F(JsonCourseRepositoryTests, ListCourseIdsIgnoresFoldersWithoutCourseFile)
+TEST_F(JsonCourseRepositoryTests, ListCourseIdsIgnoresFoldersThatAreNotListed)
 {
     m_repository->save(makeCourse(1));
     fs::create_directories(m_workspace->coursesDir() / "Course02");

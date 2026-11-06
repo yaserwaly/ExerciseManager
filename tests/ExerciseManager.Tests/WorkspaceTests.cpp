@@ -79,30 +79,30 @@ TEST_F(WorkspaceTests, InitializeTwiceKeepsExistingFiles)
 TEST_F(WorkspaceTests, FoldersAreInsideTheRoot)
 {
     const Workspace workspace(m_root);
-    EXPECT_EQ(workspace.coursesDir(), workspace.root() / "courses");
+    EXPECT_EQ(workspace.coursesDir(), workspace.root() / "Courses");
     EXPECT_EQ(workspace.sharedDir(), workspace.root() / "shared");
     EXPECT_EQ(workspace.deletedDir(), workspace.root() / "_deleted");
     EXPECT_EQ(workspace.buildDir(), workspace.root() / "build");
 }
 
-TEST_F(WorkspaceTests, BuildsCourseFolderAndFilePaths)
+TEST_F(WorkspaceTests, BuildsCourseFolderPath)
 {
     const Workspace workspace(m_root);
-    EXPECT_EQ(workspace.courseDir(1), workspace.root() / "courses" / "Course01");
-    EXPECT_EQ(workspace.courseFile(10), workspace.root() / "courses" / "Course10" / "course.json");
+    EXPECT_EQ(workspace.courseDir(1), workspace.root() / "Courses" / "Course01");
+    EXPECT_EQ(workspace.courseDir(10), workspace.root() / "Courses" / "Course10");
 }
 
 TEST_F(WorkspaceTests, RejectsCourseNumberOutOfRange)
 {
     const Workspace workspace(m_root);
     EXPECT_THROW(workspace.courseDir(0), InvalidExerciseNameError);
-    EXPECT_THROW(workspace.courseFile(100), InvalidExerciseNameError);
+    EXPECT_THROW(workspace.exercisesFile(100), InvalidExerciseNameError);
 }
 
 TEST_F(WorkspaceTests, GuardAcceptsCoursePathsAndRejectsOutsidePaths)
 {
     const Workspace workspace(m_root);
-    EXPECT_NO_THROW(workspace.guard().ensureInside(workspace.courseFile(1)));
+    EXPECT_NO_THROW(workspace.guard().ensureInside(workspace.exercisesFile(1)));
     EXPECT_THROW(workspace.guard().ensureInside("../outside.txt"), WorkspaceError);
 }
 
@@ -118,4 +118,20 @@ TEST_F(WorkspaceTests, FromEnvironmentFailsWhenVariableIsMissing)
 {
     _putenv_s(Workspace::kEnvironmentVariable, "");
     EXPECT_THROW(Workspace::fromEnvironment(), WorkspaceError);
+}
+
+TEST_F(WorkspaceTests, BuildsCoursesFilePath)
+{
+    const Workspace workspace(m_root);
+    EXPECT_EQ(workspace.coursesFile(), workspace.root() / "Courses" / "Courses.json");
+}
+
+TEST_F(WorkspaceTests, BuildsExercisesFilePath)
+{
+    const Workspace workspace(m_root);
+    EXPECT_EQ(workspace.exercisesFile(1),
+              workspace.root() / "Courses" / "Course01" / "Exercises.json");
+    EXPECT_EQ(workspace.exercisesFile(10),
+              workspace.root() / "Courses" / "Course10" / "Exercises.json");
+    EXPECT_THROW(workspace.exercisesFile(0), InvalidExerciseNameError);
 }
