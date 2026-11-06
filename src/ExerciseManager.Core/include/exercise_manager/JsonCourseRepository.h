@@ -14,7 +14,7 @@ namespace exercise_manager
 /// @code
 /// {
 ///   "schema_version": 1,
-///   "courses": [ { "id": 1, "name": "C++ Basics", "description": "..." } ]
+///   "courses": [ { "id": 1, "name": "C++ Basics", "description": "...", "full_description": "..." } ]
 /// }
 /// @endcode
 ///

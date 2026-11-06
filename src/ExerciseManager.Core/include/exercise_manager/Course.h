@@ -25,6 +25,9 @@ struct Course
 
     /// @brief Short description of the course.
     std::string description;
+
+    /// @brief Detailed description of the course.
+    std::string fullDescription;
 };
 
 } // namespace exercise_manager

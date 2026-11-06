@@ -24,7 +24,7 @@ namespace
 {
 
 const char* const kValidCoursesJson =
-    R"({"schema_version":1,"courses":[{"id":1,"name":"x","description":"y"}]})";
+    R"({"schema_version":1,"courses":[{"id":1,"name":"x","description":"y","full_description":"z"}]})";
 
 // Creates a fresh temporary workspace and deletes it when the test ends.
 class JsonCourseRepositoryTests : public ::testing::Test
@@ -53,6 +53,7 @@ class JsonCourseRepositoryTests : public ::testing::Test
         course.id = id;
         course.name = "C++ Basics";
         course.description = "Basics of C++";
+        course.fullDescription = "Basics of C++: variables, loops and functions";
         course.exercises.push_back(
             Exercise{1, "adder", "Add two numbers", "Adds two numbers and prints the sum"});
         course.exercises.push_back(Exercise{3, "جمع رقمين", "وصف بالعربي", "وصف كامل بالعربي"});
@@ -86,6 +87,7 @@ TEST_F(JsonCourseRepositoryTests, SaveThenLoadReturnsSameData)
     EXPECT_EQ(loaded.id, 1);
     EXPECT_EQ(loaded.name, "C++ Basics");
     EXPECT_EQ(loaded.description, "Basics of C++");
+    EXPECT_EQ(loaded.fullDescription, "Basics of C++: variables, loops and functions");
     ASSERT_EQ(loaded.exercises.size(), 2u);
     EXPECT_EQ(loaded.exercises[0].number, 1);
     EXPECT_EQ(loaded.exercises[0].name, "adder");
@@ -166,7 +168,7 @@ TEST_F(JsonCourseRepositoryTests, LoadInvalidCoursesJsonThrowsStorageError)
 TEST_F(JsonCourseRepositoryTests, LoadCoursesMissingFieldThrowsStorageError)
 {
     writeRawFile(m_workspace->coursesFile(),
-                 R"({"schema_version":1,"courses":[{"id":1,"name":"x"}]})");
+                 R"({"schema_version":1,"courses":[{"id":1,"name":"x","description":"y"}]})");
     EXPECT_THROW(m_repository->load(1), StorageError);
 }
 
@@ -178,9 +180,10 @@ TEST_F(JsonCourseRepositoryTests, LoadCoursesUnsupportedSchemaVersionThrowsStora
 
 TEST_F(JsonCourseRepositoryTests, LoadCoursesWithDuplicateIdsThrowsStorageError)
 {
-    writeRawFile(m_workspace->coursesFile(), R"({"schema_version":1,"courses":[)"
-                                             R"({"id":1,"name":"a","description":"a"},)"
-                                             R"({"id":1,"name":"b","description":"b"}]})");
+    writeRawFile(m_workspace->coursesFile(),
+                 R"({"schema_version":1,"courses":[)"
+                 R"({"id":1,"name":"a","description":"a","full_description":"a"},)"
+                 R"({"id":1,"name":"b","description":"b","full_description":"b"}]})");
     EXPECT_THROW(m_repository->load(1), StorageError);
 }
 

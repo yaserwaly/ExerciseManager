@@ -26,6 +26,7 @@ struct CourseEntry
     int id = 0;
     std::string name;
     std::string description;
+    std::string fullDescription;
 };
 
 // Reads "key" as an int, or throws StorageError with a clear message.
@@ -142,6 +143,7 @@ std::vector<CourseEntry> readCourseEntries(const Workspace& workspace)
             entry.id = requireInt(item, "id");
             entry.name = requireString(item, "name");
             entry.description = requireString(item, "description");
+            entry.fullDescription = requireString(item, "full_description");
 
             const bool duplicate =
                 std::any_of(entries.begin(), entries.end(),
@@ -166,8 +168,10 @@ json coursesToJson(const std::vector<CourseEntry>& entries)
     json courses = json::array();
     for (const CourseEntry& entry : entries)
     {
-        courses.push_back(
-            {{"id", entry.id}, {"name", entry.name}, {"description", entry.description}});
+        courses.push_back({{"id", entry.id},
+                           {"name", entry.name},
+                           {"description", entry.description},
+                           {"full_description", entry.fullDescription}});
     }
 
     return json{{"schema_version", JsonCourseRepository::kSchemaVersion}, {"courses", courses}};
@@ -262,6 +266,7 @@ Course JsonCourseRepository::load(int courseId) const
     course.id = it->id;
     course.name = it->name;
     course.description = it->description;
+    course.fullDescription = it->fullDescription;
     course.exercises = readExercises(m_workspace, courseId);
     return course;
 }
@@ -273,7 +278,7 @@ void JsonCourseRepository::save(const Course& course)
 
     std::vector<CourseEntry> entries = readCourseEntries(m_workspace);
 
-    const CourseEntry entry{course.id, course.name, course.description};
+    const CourseEntry entry{course.id, course.name, course.description, course.fullDescription};
     const auto it = std::find_if(entries.begin(), entries.end(), [&course](const CourseEntry& other)
                                  { return other.id == course.id; });
     if (it != entries.end())
