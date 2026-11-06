@@ -108,6 +108,16 @@ fs::path Workspace::courseFile(int courseId) const
     return courseDir(courseId) / kCourseFileName;
 }
 
+fs::path Workspace::coursesFile() const
+{
+    return coursesDir() / kCoursesFileName;
+}
+
+fs::path Workspace::exercisesFile(int courseId) const
+{
+    return courseDir(courseId) / kExercisesFileName;
+}
+
 const PathGuard& Workspace::guard() const noexcept
 {
     return m_guard;

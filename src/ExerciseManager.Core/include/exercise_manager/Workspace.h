@@ -13,7 +13,9 @@ namespace exercise_manager
 /// the `EXERCISE_WORKSPACE` environment variable. Layout:
 /// @code
 /// <workspace>/
-///   courses/c01/course.json, c01Problem001.hpp, ...
+///   Courses/Courses.json              all courses (id, name, description)
+///   Courses/Course01/Exercises.json   exercises of one course
+///   Courses/Course01/C01Exercise001.hpp, ...
 ///   shared/      shared libraries for exercises
 ///   _deleted/    deleted exercises (never wiped)
 ///   build/       build output
@@ -25,13 +27,19 @@ public:
     static constexpr const char* kEnvironmentVariable = "EXERCISE_WORKSPACE";
 
     /// @brief Folder names inside the workspace.
-    static constexpr const char* kCoursesFolder = "courses";
+    static constexpr const char* kCoursesFolder = "Courses";
     static constexpr const char* kSharedFolder = "shared";
     static constexpr const char* kDeletedFolder = "_deleted";
     static constexpr const char* kBuildFolder = "build";
 
     /// @brief File name of the course data file inside a course folder.
-    static constexpr const char* kCourseFileName = "course.json";
+    static constexpr const char* kCourseFileName = "Course.json";
+
+    /// @brief File name of the list of all courses, inside the Courses folder.
+    static constexpr const char* kCoursesFileName = "Courses.json";
+
+    /// @brief File name of the exercises list, inside a course folder.
+    static constexpr const char* kExercisesFileName = "Exercises.json";
 
     /// @brief Creates a workspace object for a folder. Nothing is created on disk yet.
     /// @param root The workspace folder (it may not exist yet).
@@ -68,6 +76,13 @@ public:
     /// @brief Data file of one course, e.g. `<workspace>/courses/c01/course.json`.
     /// @throws InvalidExerciseNameError if the course number is out of range.
     std::filesystem::path courseFile(int courseId) const;
+
+    /// @brief File that lists all courses, e.g. `<workspace>/Courses/Courses.json`.
+    std::filesystem::path coursesFile() const;
+
+    /// @brief Exercises file of one course, e.g. `<workspace>/Courses/Course01/Exercises.json`.
+    /// @throws InvalidExerciseNameError if the course number is out of range.
+    std::filesystem::path exercisesFile(int courseId) const;
 
     /// @brief The guard that checks paths stay inside this workspace.
     const PathGuard& guard() const noexcept;
