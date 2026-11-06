@@ -66,7 +66,7 @@ public:
     /// @brief Folder for build output.
     std::filesystem::path buildDir() const;
 
-    /// @brief Folder of one course, e.g. `<workspace>/courses/c01`.
+        /// @brief Folder of one course, e.g. `<workspace>/Courses/Course01`.
     /// @throws InvalidExerciseNameError if the course number is out of range.
     std::filesystem::path courseDir(int courseId) const;
 

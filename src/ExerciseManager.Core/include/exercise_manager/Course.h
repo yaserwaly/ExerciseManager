@@ -14,7 +14,7 @@ namespace exercise_manager
 /// services, and the storage format lives in the repository.
 struct Course
 {
-    /// @brief Course number (1..10 and so on). Used in file names, e.g. c01.
+    /// @brief Course number (1..10 and so on). Used in file names, e.g. C01.
     int id = 0;
 
     /// @brief Display name of the course.
