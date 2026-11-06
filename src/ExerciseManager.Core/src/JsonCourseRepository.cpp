@@ -1,17 +1,15 @@
 #include "exercise_manager/JsonCourseRepository.h"
 
 #include "exercise_manager/Errors.h"
-#include "exercise_manager/FileNaming.h"
 
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
-#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <string_view>
 #include <system_error>
+#include <utility>
 
 namespace exercise_manager
 {
@@ -22,12 +20,20 @@ using nlohmann::json;
 namespace
 {
 
+// A course as listed in Courses.json (without its exercises).
+struct CourseEntry
+{
+    int id = 0;
+    std::string name;
+    std::string description;
+};
+
 // Reads "key" as an int, or throws StorageError with a clear message.
 int requireInt(const json& object, const char* key)
 {
     if (!object.is_object() || !object.contains(key) || !object[key].is_number_integer())
     {
-        throw StorageError(std::string("Course file is invalid: missing or bad field '") + key +
+        throw StorageError(std::string("Data file is invalid: missing or bad field '") + key +
                            "'.");
     }
     return object[key].get<int>();
@@ -37,65 +43,194 @@ std::string requireString(const json& object, const char* key)
 {
     if (!object.is_object() || !object.contains(key) || !object[key].is_string())
     {
-        throw StorageError(std::string("Course file is invalid: missing or bad field '") + key +
+        throw StorageError(std::string("Data file is invalid: missing or bad field '") + key +
                            "'.");
     }
     return object[key].get<std::string>();
 }
 
-Course fromJson(const json& root, int expectedId)
+void requireSchemaVersion(const json& root)
 {
-    const int version = requireInt(root, "schema_version");
-    if (version != JsonCourseRepository::kSchemaVersion)
+    if (requireInt(root, "schema_version") != JsonCourseRepository::kSchemaVersion)
     {
-        throw StorageError("Course file has an unsupported schema version.");
+        throw StorageError("Data file has an unsupported schema version.");
     }
-
-    if (!root.contains("course") || !root["course"].is_object())
-    {
-        throw StorageError("Course file is invalid: missing 'course' object.");
-    }
-
-    Course course;
-    course.id = requireInt(root["course"], "id");
-    course.name = requireString(root["course"], "name");
-    course.nextExerciseNumber = requireInt(root, "next_exercise_number");
-
-    if (course.id != expectedId)
-    {
-        throw StorageError("Course file does not match its folder.");
-    }
-
-    if (!root.contains("exercises") || !root["exercises"].is_array())
-    {
-        throw StorageError("Course file is invalid: missing 'exercises' array.");
-    }
-
-    for (const json& item : root["exercises"])
-    {
-        Exercise exercise;
-        exercise.number = requireInt(item, "number");
-        exercise.name = requireString(item, "name");
-        exercise.description = requireString(item, "description");
-        course.exercises.push_back(std::move(exercise));
-    }
-
-    return course;
 }
 
-json toJson(const Course& course)
+json readJsonFile(const fs::path& file)
+{
+    std::ifstream in(file, std::ios::binary);
+    if (!in)
+    {
+        throw StorageError("Could not open a data file.");
+    }
+
+    try
+    {
+        return json::parse(in);
+    }
+    catch (const json::parse_error&)
+    {
+        throw StorageError("Data file is not valid JSON.");
+    }
+}
+
+// Writes to "<file>.tmp" first, then replaces the real file in one step.
+void writeJsonFile(const fs::path& file, const json& data)
+{
+    std::error_code ec;
+    fs::create_directories(file.parent_path(), ec);
+    if (ec)
+    {
+        throw StorageError("Could not create the data folder.");
+    }
+
+    fs::path temp = file;
+    temp += ".tmp";
+
+    {
+        std::ofstream out(temp, std::ios::binary | std::ios::trunc);
+        if (!out)
+        {
+            throw StorageError("Could not create the temporary data file.");
+        }
+        out << data.dump(2) << '\n';
+        out.flush();
+        if (!out)
+        {
+            fs::remove(temp, ec);
+            throw StorageError("Could not write the data file.");
+        }
+    }
+
+    // On Windows, rename() replaces an existing file in one step.
+    fs::rename(temp, file, ec);
+    if (ec)
+    {
+        std::error_code ignored;
+        fs::remove(temp, ignored);
+        throw StorageError("Could not replace the data file.");
+    }
+}
+
+// Reads Courses.json. A missing file means "no courses yet".
+std::vector<CourseEntry> readCourseEntries(const Workspace& workspace)
+{
+    const fs::path file = workspace.coursesFile();
+
+    std::error_code ec;
+    if (!fs::is_regular_file(file, ec))
+    {
+        return {};
+    }
+
+    const json root = readJsonFile(file);
+
+    try
+    {
+        requireSchemaVersion(root);
+
+        if (!root.contains("courses") || !root["courses"].is_array())
+        {
+            throw StorageError("Courses file is invalid: missing 'courses' array.");
+        }
+
+        std::vector<CourseEntry> entries;
+        for (const json& item : root["courses"])
+        {
+            CourseEntry entry;
+            entry.id = requireInt(item, "id");
+            entry.name = requireString(item, "name");
+            entry.description = requireString(item, "description");
+
+            const bool duplicate =
+                std::any_of(entries.begin(), entries.end(),
+                            [&entry](const CourseEntry& other) { return other.id == entry.id; });
+            if (duplicate)
+            {
+                throw StorageError("Courses file is invalid: duplicate course number.");
+            }
+
+            entries.push_back(std::move(entry));
+        }
+        return entries;
+    }
+    catch (const json::exception&)
+    {
+        throw StorageError("Courses file has unexpected data.");
+    }
+}
+
+json coursesToJson(const std::vector<CourseEntry>& entries)
+{
+    json courses = json::array();
+    for (const CourseEntry& entry : entries)
+    {
+        courses.push_back(
+            {{"id", entry.id}, {"name", entry.name}, {"description", entry.description}});
+    }
+
+    return json{{"schema_version", JsonCourseRepository::kSchemaVersion}, {"courses", courses}};
+}
+
+// Reads Exercises.json of one course. A listed course must have this file.
+std::vector<Exercise> readExercises(const Workspace& workspace, int courseId)
+{
+    const fs::path file = workspace.exercisesFile(courseId);
+
+    std::error_code ec;
+    if (!fs::is_regular_file(file, ec))
+    {
+        throw StorageError("Exercises file is missing.");
+    }
+
+    const json root = readJsonFile(file);
+
+    try
+    {
+        requireSchemaVersion(root);
+
+        if (requireInt(root, "course_id") != courseId)
+        {
+            throw StorageError("Exercises file does not match its folder.");
+        }
+
+        if (!root.contains("exercises") || !root["exercises"].is_array())
+        {
+            throw StorageError("Exercises file is invalid: missing 'exercises' array.");
+        }
+
+        std::vector<Exercise> exercises;
+        for (const json& item : root["exercises"])
+        {
+            Exercise exercise;
+            exercise.number = requireInt(item, "number");
+            exercise.name = requireString(item, "name");
+            exercise.description = requireString(item, "description");
+            exercise.fullDescription = requireString(item, "full_description");
+            exercises.push_back(std::move(exercise));
+        }
+        return exercises;
+    }
+    catch (const json::exception&)
+    {
+        throw StorageError("Exercises file has unexpected data.");
+    }
+}
+
+json exercisesToJson(const Course& course)
 {
     json exercises = json::array();
     for (const Exercise& exercise : course.exercises)
     {
         exercises.push_back({{"number", exercise.number},
                              {"name", exercise.name},
-                             {"description", exercise.description}});
+                             {"description", exercise.description},
+                             {"full_description", exercise.fullDescription}});
     }
 
     return json{{"schema_version", JsonCourseRepository::kSchemaVersion},
-                {"course", {{"id", course.id}, {"name", course.name}}},
-                {"next_exercise_number", course.nextExerciseNumber},
+                {"course_id", course.id},
                 {"exercises", exercises}};
 }
 
@@ -107,117 +242,69 @@ JsonCourseRepository::JsonCourseRepository(const Workspace& workspace) : m_works
 
 bool JsonCourseRepository::exists(int courseId) const
 {
-    std::error_code ec;
-    return fs::is_regular_file(m_workspace.courseFile(courseId), ec);
+    const std::vector<CourseEntry> entries = readCourseEntries(m_workspace);
+    return std::any_of(entries.begin(), entries.end(),
+                       [courseId](const CourseEntry& entry) { return entry.id == courseId; });
 }
 
 Course JsonCourseRepository::load(int courseId) const
 {
-    const fs::path file = m_workspace.courseFile(courseId);
-
-    if (!exists(courseId))
+    const std::vector<CourseEntry> entries = readCourseEntries(m_workspace);
+    const auto it =
+        std::find_if(entries.begin(), entries.end(),
+                     [courseId](const CourseEntry& entry) { return entry.id == courseId; });
+    if (it == entries.end())
     {
         throw CourseNotFoundError("Course does not exist.");
     }
 
-    std::ifstream in(file, std::ios::binary);
-    if (!in)
-    {
-        throw StorageError("Could not open the course file.");
-    }
-
-    json root;
-    try
-    {
-        root = json::parse(in);
-    }
-    catch (const json::parse_error&)
-    {
-        throw StorageError("Course file is not valid JSON.");
-    }
-
-    try
-    {
-        return fromJson(root, courseId);
-    }
-    catch (const json::exception&)
-    {
-        throw StorageError("Course file has unexpected data.");
-    }
+    Course course;
+    course.id = it->id;
+    course.name = it->name;
+    course.description = it->description;
+    course.exercises = readExercises(m_workspace, courseId);
+    return course;
 }
 
 void JsonCourseRepository::save(const Course& course)
 {
-    const fs::path file = m_workspace.courseFile(course.id);
-    const fs::path folder = file.parent_path();
-    fs::path temp = file;
-    temp += ".tmp";
+    // Throws InvalidExerciseNameError for a bad course number, before anything is written.
+    const fs::path exercisesFile = m_workspace.exercisesFile(course.id);
 
-    std::error_code ec;
-    fs::create_directories(folder, ec);
-    if (ec)
+    std::vector<CourseEntry> entries = readCourseEntries(m_workspace);
+
+    const CourseEntry entry{course.id, course.name, course.description};
+    const auto it = std::find_if(entries.begin(), entries.end(), [&course](const CourseEntry& other)
+                                 { return other.id == course.id; });
+    if (it != entries.end())
     {
-        throw StorageError("Could not create the course folder.");
+        *it = entry;
+    }
+    else
+    {
+        entries.push_back(entry);
     }
 
-    {
-        std::ofstream out(temp, std::ios::binary | std::ios::trunc);
-        if (!out)
-        {
-            throw StorageError("Could not create the temporary course file.");
-        }
-        out << toJson(course).dump(2) << '\n';
-        out.flush();
-        if (!out)
-        {
-            fs::remove(temp, ec);
-            throw StorageError("Could not write the course file.");
-        }
-    }
+    std::sort(entries.begin(), entries.end(),
+              [](const CourseEntry& a, const CourseEntry& b) { return a.id < b.id; });
 
-    // On Windows, rename() replaces an existing file in one step.
-    fs::rename(temp, file, ec);
-    if (ec)
-    {
-        std::error_code ignored;
-        fs::remove(temp, ignored);
-        throw StorageError("Could not replace the course file.");
-    }
+    // Exercises first: if something fails in between, the course is just not listed yet.
+    writeJsonFile(exercisesFile, exercisesToJson(course));
+    writeJsonFile(m_workspace.coursesFile(), coursesToJson(entries));
 }
 
 std::vector<int> JsonCourseRepository::listCourseIds() const
 {
+    const std::vector<CourseEntry> entries = readCourseEntries(m_workspace);
+
     std::vector<int> ids;
-
-    std::error_code ec;
-    if (!fs::is_directory(m_workspace.coursesDir(), ec))
+    ids.reserve(entries.size());
+    for (const CourseEntry& entry : entries)
     {
-        return ids;
-    }
-
-    constexpr std::string_view prefix = FileNaming::kCourseFolderPrefix;
-
-    for (const fs::directory_entry& entry : fs::directory_iterator(m_workspace.coursesDir(), ec))
-    {
-        const std::string name = entry.path().filename().string();
-
-        // Folder names look like "Course01": the prefix followed by exactly two digits.
-        if (name.size() != prefix.size() + 2 || name.compare(0, prefix.size(), prefix) != 0 ||
-            !std::all_of(name.begin() + prefix.size(), name.end(),
-                         [](unsigned char ch) { return std::isdigit(ch) != 0; }))
-        {
-            continue;
-        }
-
-        const int id = std::stoi(name.substr(prefix.size()));
-        if (id >= 1 && exists(id))
-        {
-            ids.push_back(id);
-        }
+        ids.push_back(entry.id);
     }
 
     std::sort(ids.begin(), ids.end());
-    ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
     return ids;
 }
 
