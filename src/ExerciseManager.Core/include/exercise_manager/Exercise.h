@@ -19,6 +19,9 @@ struct Exercise
 
     /// @brief Free-text description.
     std::string description;
+
+    /// @brief Detailed description (the full text of the exercise).
+    std::string fullDescription;
 };
 
 } // namespace exercise_manager

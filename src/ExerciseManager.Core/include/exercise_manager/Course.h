@@ -25,6 +25,9 @@ struct Course
 
     /// @brief The exercises of this course.
     std::vector<Exercise> exercises;
+
+    /// @brief Short description of the course.
+    std::string description;
 };
 
 } // namespace exercise_manager
