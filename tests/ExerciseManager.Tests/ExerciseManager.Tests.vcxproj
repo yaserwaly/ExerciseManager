@@ -151,6 +151,7 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ExerciseServiceTests.cpp" />
     <ClCompile Include="FileNamingTests.cpp" />
     <ClCompile Include="JsonCourseRepositoryTests.cpp" />
     <ClCompile Include="NameValidatorTests.cpp" />
