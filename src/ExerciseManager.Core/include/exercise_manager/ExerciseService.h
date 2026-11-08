@@ -3,6 +3,8 @@
 #include "exercise_manager/Course.h"
 #include "exercise_manager/ICourseRepository.h"
 
+#include <string>
+
 namespace exercise_manager
 {
 
@@ -26,6 +28,22 @@ class ExerciseService
     /// @throws InvalidExerciseNameError if the course is full (no free number up to
     ///         FileNaming::kMaxExerciseNumber).
     static int nextExerciseNumber(const Course& course);
+
+        /// @brief Adds a new exercise to a course.
+    ///
+    /// The new exercise gets the first free number. Only the stored data is
+    /// updated here; the source files are generated elsewhere.
+    /// @param courseId The course number.
+    /// @param name Exercise name (checked by NameValidator).
+    /// @param description Short description.
+    /// @param fullDescription Detailed description.
+    /// @return The number given to the new exercise.
+    /// @throws InvalidExerciseNameError if the name is not allowed or the course is full.
+    /// @throws CourseNotFoundError if the course does not exist.
+    /// @throws DuplicateExerciseError if the course already has an exercise with this name.
+    /// @throws StorageError if the data cannot be read or written.
+    int addExercise(int courseId, const std::string& name, const std::string& description,
+                    const std::string& fullDescription);
 
   private:
     ICourseRepository& m_repository;
