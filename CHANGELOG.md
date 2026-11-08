@@ -1,28 +1,19 @@
-\# Changelog
-
-
+# Changelog
 
 All notable changes to this project are documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
 
-The format is based on \[Keep a Changelog](https://keepachangelog.com/),
+### Added
+- Visual Studio solution with Core, App and Tests projects.
+- Shared `Directory.Build.props` (C++20, `/W4`, central output paths).
+- GitHub templates for pull requests and issues.
+- Contribution guidelines.
+- Exercise service: add, update and permanently delete exercises (data and source files).
+- Exercise numbering: a new exercise takes the first free number, and a deleted number is reused.
 
-and this project follows \[Semantic Versioning](https://semver.org/).
-
-
-
-\## \[Unreleased]
-
-
-
-\### Added
-
-\- Visual Studio solution with Core, App and Tests projects.
-
-\- Shared `Directory.Build.props` (C++20, `/W4`, central output paths).
-
-\- GitHub templates for pull requests and issues.
-
-\- Contribution guidelines.
-
+### Changed
+- Exercise number comment updated: deleted numbers are now reused.

@@ -42,6 +42,9 @@
     <ClInclude Include="include\exercise_manager\JsonCourseRepository.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\exercise_manager\ExerciseService.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\NameValidator.cpp">
@@ -57,6 +60,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\JsonCourseRepository.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ExerciseService.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
