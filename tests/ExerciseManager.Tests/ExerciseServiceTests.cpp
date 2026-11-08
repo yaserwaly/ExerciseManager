@@ -3,23 +3,30 @@
 #include "exercise_manager/Errors.h"
 #include "exercise_manager/FileNaming.h"
 #include "exercise_manager/ICourseRepository.h"
-using exercise_manager::ExerciseNotFoundError;
-
-#include <algorithm>
-#include <map>
+#include "exercise_manager/Workspace.h"
 
 #include <gtest/gtest.h>
 
+#include <filesystem>
+#include <fstream>
+#include <map>
+#include <memory>
+#include <string>
 #include <vector>
 
+namespace fs = std::filesystem;
+
 using exercise_manager::Course;
-using exercise_manager::Exercise;
-using exercise_manager::ExerciseService;
-using exercise_manager::FileNaming;
-using exercise_manager::InvalidExerciseNameError;
 using exercise_manager::CourseNotFoundError;
 using exercise_manager::DuplicateExerciseError;
+using exercise_manager::Exercise;
+using exercise_manager::ExerciseNotFoundError;
+using exercise_manager::ExerciseService;
+using exercise_manager::FileNaming;
 using exercise_manager::ICourseRepository;
+using exercise_manager::InvalidExerciseNameError;
+using exercise_manager::Workspace;
+
 namespace
 {
 
@@ -74,7 +81,53 @@ class FakeCourseRepository : public ICourseRepository
     std::map<int, Course> m_courses;
 };
 
+// Gives every test its own temporary workspace and an in-memory repository.
+class ExerciseServiceFixture : public ::testing::Test
+{
+  protected:
+    void SetUp() override
+    {
+        const auto* info = ::testing::UnitTest::GetInstance()->current_test_info();
+        m_root = fs::temp_directory_path() / (std::string("em_service_") + info->name());
+        fs::remove_all(m_root);
+        m_workspace = std::make_unique<Workspace>(m_root);
+        m_workspace->initialize();
+        m_service = std::make_unique<ExerciseService>(m_repository, *m_workspace);
+    }
+
+    void TearDown() override
+    {
+        m_service.reset();
+        m_workspace.reset();
+        fs::remove_all(m_root);
+    }
+
+    fs::path headerPath(int courseId, int number) const
+    {
+        return m_workspace->courseDir(courseId) / FileNaming::headerFileName(courseId, number);
+    }
+
+    fs::path sourcePath(int courseId, int number) const
+    {
+        return m_workspace->courseDir(courseId) / FileNaming::sourceFileName(courseId, number);
+    }
+
+    void createFiles(int courseId, int number) const
+    {
+        fs::create_directories(m_workspace->courseDir(courseId));
+        std::ofstream(headerPath(courseId, number)) << "// header";
+        std::ofstream(sourcePath(courseId, number)) << "// source";
+    }
+
+    fs::path m_root;
+    FakeCourseRepository m_repository;
+    std::unique_ptr<Workspace> m_workspace;
+    std::unique_ptr<ExerciseService> m_service;
+};
+
 } // namespace
+
+// ---------- nextExerciseNumber (static, no service needed) ----------
 
 TEST(ExerciseServiceTests, NextNumberIsOneForEmptyCourse)
 {
@@ -112,15 +165,15 @@ TEST(ExerciseServiceTests, NextNumberThrowsWhenCourseIsFull)
                  InvalidExerciseNameError);
 }
 
-TEST(ExerciseServiceTests, AddExerciseGivesNumberOneToFirstExercise)
+// ---------- addExercise ----------
+
+TEST_F(ExerciseServiceFixture, AddExerciseGivesNumberOneToFirstExercise)
 {
-    FakeCourseRepository repository;
-    repository.save(makeCourseWithNumbers({}));
-    ExerciseService service(repository);
+    m_repository.save(makeCourseWithNumbers({}));
 
-    EXPECT_EQ(service.addExercise(1, "adder", "short", "full"), 1);
+    EXPECT_EQ(m_service->addExercise(1, "adder", "short", "full"), 1);
 
-    const Course course = repository.load(1);
+    const Course course = m_repository.load(1);
     ASSERT_EQ(course.exercises.size(), 1u);
     EXPECT_EQ(course.exercises[0].number, 1);
     EXPECT_EQ(course.exercises[0].name, "adder");
@@ -128,54 +181,45 @@ TEST(ExerciseServiceTests, AddExerciseGivesNumberOneToFirstExercise)
     EXPECT_EQ(course.exercises[0].fullDescription, "full");
 }
 
-TEST(ExerciseServiceTests, AddExerciseTakesFirstFreeNumber)
+TEST_F(ExerciseServiceFixture, AddExerciseTakesFirstFreeNumber)
 {
-    FakeCourseRepository repository;
-    repository.save(makeCourseWithNumbers({1, 3}));
-    ExerciseService service(repository);
+    m_repository.save(makeCourseWithNumbers({1, 3}));
 
-    EXPECT_EQ(service.addExercise(1, "gap filler", "", ""), 2);
+    EXPECT_EQ(m_service->addExercise(1, "gap filler", "", ""), 2);
 }
 
-TEST(ExerciseServiceTests, AddExerciseThrowsForMissingCourse)
+TEST_F(ExerciseServiceFixture, AddExerciseThrowsForMissingCourse)
 {
-    FakeCourseRepository repository;
-    ExerciseService service(repository);
-
-    EXPECT_THROW(service.addExercise(5, "adder", "", ""), CourseNotFoundError);
+    EXPECT_THROW(m_service->addExercise(5, "adder", "", ""), CourseNotFoundError);
 }
 
-TEST(ExerciseServiceTests, AddExerciseRejectsInvalidName)
+TEST_F(ExerciseServiceFixture, AddExerciseRejectsInvalidName)
 {
-    FakeCourseRepository repository;
-    repository.save(makeCourseWithNumbers({}));
-    ExerciseService service(repository);
+    m_repository.save(makeCourseWithNumbers({}));
 
-    EXPECT_THROW(service.addExercise(1, "bad/name", "", ""), InvalidExerciseNameError);
-    EXPECT_TRUE(repository.load(1).exercises.empty());
+    EXPECT_THROW(m_service->addExercise(1, "bad/name", "", ""), InvalidExerciseNameError);
+    EXPECT_TRUE(m_repository.load(1).exercises.empty());
 }
 
-TEST(ExerciseServiceTests, AddExerciseRejectsDuplicateName)
+TEST_F(ExerciseServiceFixture, AddExerciseRejectsDuplicateName)
 {
-    FakeCourseRepository repository;
-    repository.save(makeCourseWithNumbers({}));
-    ExerciseService service(repository);
+    m_repository.save(makeCourseWithNumbers({}));
 
-    service.addExercise(1, "adder", "", "");
-    EXPECT_THROW(service.addExercise(1, "adder", "", ""), DuplicateExerciseError);
-    EXPECT_EQ(repository.load(1).exercises.size(), 1u);
+    m_service->addExercise(1, "adder", "", "");
+    EXPECT_THROW(m_service->addExercise(1, "adder", "", ""), DuplicateExerciseError);
+    EXPECT_EQ(m_repository.load(1).exercises.size(), 1u);
 }
 
-TEST(ExerciseServiceTests, UpdateExerciseChangesNameAndDescriptions)
+// ---------- updateExercise ----------
+
+TEST_F(ExerciseServiceFixture, UpdateExerciseChangesNameAndDescriptions)
 {
-    FakeCourseRepository repository;
-    repository.save(makeCourseWithNumbers({}));
-    ExerciseService service(repository);
-    service.addExercise(1, "adder", "old short", "old full");
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "old short", "old full");
 
-    service.updateExercise(1, 1, "sum", "new short", "new full");
+    m_service->updateExercise(1, 1, "sum", "new short", "new full");
 
-    const Course course = repository.load(1);
+    const Course course = m_repository.load(1);
     ASSERT_EQ(course.exercises.size(), 1u);
     EXPECT_EQ(course.exercises[0].number, 1);
     EXPECT_EQ(course.exercises[0].name, "sum");
@@ -183,53 +227,106 @@ TEST(ExerciseServiceTests, UpdateExerciseChangesNameAndDescriptions)
     EXPECT_EQ(course.exercises[0].fullDescription, "new full");
 }
 
-TEST(ExerciseServiceTests, UpdateExerciseAllowsKeepingOwnName)
+TEST_F(ExerciseServiceFixture, UpdateExerciseAllowsKeepingOwnName)
 {
-    FakeCourseRepository repository;
-    repository.save(makeCourseWithNumbers({}));
-    ExerciseService service(repository);
-    service.addExercise(1, "adder", "old", "old");
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "old", "old");
 
-    EXPECT_NO_THROW(service.updateExercise(1, 1, "adder", "new", "new"));
-    EXPECT_EQ(repository.load(1).exercises[0].description, "new");
+    EXPECT_NO_THROW(m_service->updateExercise(1, 1, "adder", "new", "new"));
+    EXPECT_EQ(m_repository.load(1).exercises[0].description, "new");
 }
 
-TEST(ExerciseServiceTests, UpdateExerciseThrowsForMissingCourse)
+TEST_F(ExerciseServiceFixture, UpdateExerciseThrowsForMissingCourse)
 {
-    FakeCourseRepository repository;
-    ExerciseService service(repository);
-
-    EXPECT_THROW(service.updateExercise(5, 1, "adder", "", ""), CourseNotFoundError);
+    EXPECT_THROW(m_service->updateExercise(5, 1, "adder", "", ""), CourseNotFoundError);
 }
 
-TEST(ExerciseServiceTests, UpdateExerciseThrowsForMissingExercise)
+TEST_F(ExerciseServiceFixture, UpdateExerciseThrowsForMissingExercise)
 {
-    FakeCourseRepository repository;
-    repository.save(makeCourseWithNumbers({}));
-    ExerciseService service(repository);
+    m_repository.save(makeCourseWithNumbers({}));
 
-    EXPECT_THROW(service.updateExercise(1, 7, "adder", "", ""), ExerciseNotFoundError);
+    EXPECT_THROW(m_service->updateExercise(1, 7, "adder", "", ""), ExerciseNotFoundError);
 }
 
-TEST(ExerciseServiceTests, UpdateExerciseRejectsInvalidName)
+TEST_F(ExerciseServiceFixture, UpdateExerciseRejectsInvalidName)
 {
-    FakeCourseRepository repository;
-    repository.save(makeCourseWithNumbers({}));
-    ExerciseService service(repository);
-    service.addExercise(1, "adder", "", "");
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "", "");
 
-    EXPECT_THROW(service.updateExercise(1, 1, "bad/name", "", ""), InvalidExerciseNameError);
-    EXPECT_EQ(repository.load(1).exercises[0].name, "adder");
+    EXPECT_THROW(m_service->updateExercise(1, 1, "bad/name", "", ""), InvalidExerciseNameError);
+    EXPECT_EQ(m_repository.load(1).exercises[0].name, "adder");
 }
 
-TEST(ExerciseServiceTests, UpdateExerciseRejectsNameOfAnotherExercise)
+TEST_F(ExerciseServiceFixture, UpdateExerciseRejectsNameOfAnotherExercise)
 {
-    FakeCourseRepository repository;
-    repository.save(makeCourseWithNumbers({}));
-    ExerciseService service(repository);
-    service.addExercise(1, "adder", "", "");
-    service.addExercise(1, "sum", "", "");
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "", "");
+    m_service->addExercise(1, "sum", "", "");
 
-    EXPECT_THROW(service.updateExercise(1, 2, "adder", "", ""), DuplicateExerciseError);
-    EXPECT_EQ(repository.load(1).exercises[1].name, "sum");
+    EXPECT_THROW(m_service->updateExercise(1, 2, "adder", "", ""), DuplicateExerciseError);
+    EXPECT_EQ(m_repository.load(1).exercises[1].name, "sum");
+}
+
+// ---------- deleteExercise ----------
+
+TEST_F(ExerciseServiceFixture, DeleteExerciseRemovesDataAndFiles)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "", "");
+    createFiles(1, 1);
+
+    m_service->deleteExercise(1, 1);
+
+    EXPECT_TRUE(m_repository.load(1).exercises.empty());
+    EXPECT_FALSE(fs::exists(headerPath(1, 1)));
+    EXPECT_FALSE(fs::exists(sourcePath(1, 1)));
+}
+
+TEST_F(ExerciseServiceFixture, DeleteExerciseWorksWhenFilesDoNotExist)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "", "");
+
+    EXPECT_NO_THROW(m_service->deleteExercise(1, 1));
+    EXPECT_TRUE(m_repository.load(1).exercises.empty());
+}
+
+TEST_F(ExerciseServiceFixture, DeleteExerciseKeepsOtherExercisesAndFiles)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "", "");
+    m_service->addExercise(1, "sum", "", "");
+    createFiles(1, 1);
+    createFiles(1, 2);
+
+    m_service->deleteExercise(1, 1);
+
+    const Course course = m_repository.load(1);
+    ASSERT_EQ(course.exercises.size(), 1u);
+    EXPECT_EQ(course.exercises[0].number, 2);
+    EXPECT_TRUE(fs::exists(headerPath(1, 2)));
+    EXPECT_TRUE(fs::exists(sourcePath(1, 2)));
+}
+
+TEST_F(ExerciseServiceFixture, DeletedNumberIsReusedByNextExercise)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "", "");
+    m_service->addExercise(1, "sum", "", "");
+
+    m_service->deleteExercise(1, 1);
+
+    EXPECT_EQ(m_service->addExercise(1, "product", "", ""), 1);
+}
+
+TEST_F(ExerciseServiceFixture, DeleteExerciseThrowsForMissingCourse)
+{
+    EXPECT_THROW(m_service->deleteExercise(5, 1), CourseNotFoundError);
+}
+
+TEST_F(ExerciseServiceFixture, DeleteExerciseThrowsForMissingExercise)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+
+    EXPECT_THROW(m_service->deleteExercise(1, 7), ExerciseNotFoundError);
 }

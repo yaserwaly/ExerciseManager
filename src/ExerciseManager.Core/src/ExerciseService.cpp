@@ -6,11 +6,14 @@
 
 #include <algorithm>
 #include <vector>
+#include <filesystem>
+#include <system_error>
 
 namespace exercise_manager
 {
 
-ExerciseService::ExerciseService(ICourseRepository& repository) : m_repository(repository)
+ExerciseService::ExerciseService(ICourseRepository& repository, const Workspace& workspace)
+    : m_repository(repository), m_workspace(workspace)
 {
 }
 
@@ -93,6 +96,40 @@ void ExerciseService::updateExercise(int courseId, int exerciseNumber, const std
     target->description = description;
     target->fullDescription = fullDescription;
     m_repository.save(course);
+}
+
+void ExerciseService::deleteExercise(int courseId, int exerciseNumber)
+{
+    Course course = m_repository.load(courseId);
+
+    const auto target = std::find_if(course.exercises.begin(), course.exercises.end(),
+                                     [exerciseNumber](const Exercise& exercise)
+                                     { return exercise.number == exerciseNumber; });
+    if (target == course.exercises.end())
+    {
+        throw ExerciseNotFoundError("Exercise does not exist in this course.");
+    }
+
+    // Check both paths before changing anything.
+    const std::filesystem::path courseDir = m_workspace.courseDir(courseId);
+    const std::filesystem::path headerFile = m_workspace.guard().ensureInside(
+        courseDir / FileNaming::headerFileName(courseId, exerciseNumber));
+    const std::filesystem::path sourceFile = m_workspace.guard().ensureInside(
+        courseDir / FileNaming::sourceFileName(courseId, exerciseNumber));
+
+    // Data first: a leftover file is better than a listed exercise without files.
+    course.exercises.erase(target);
+    m_repository.save(course);
+
+    for (const std::filesystem::path& file : {headerFile, sourceFile})
+    {
+        std::error_code error;
+        std::filesystem::remove(file, error); // a missing file is not an error
+        if (error)
+        {
+            throw WorkspaceError("Could not delete an exercise file.");
+        }
+    }
 }
 
 } // namespace exercise_manager

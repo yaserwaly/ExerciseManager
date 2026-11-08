@@ -2,6 +2,7 @@
 
 #include "exercise_manager/Course.h"
 #include "exercise_manager/ICourseRepository.h"
+#include "exercise_manager/Workspace.h"
 
 #include <string>
 
@@ -15,9 +16,10 @@ namespace exercise_manager
 class ExerciseService
 {
   public:
-    /// @brief Creates a service that works on top of a repository.
+    /// @brief Creates a service that works on top of a repository and a workspace.
     /// @param repository The storage to use. It must outlive the service.
-    explicit ExerciseService(ICourseRepository& repository);
+    /// @param workspace The workspace where the exercise files live (copied).
+    ExerciseService(ICourseRepository& repository, const Workspace& workspace);
 
     /// @brief Finds the first free exercise number in a course.
     ///
@@ -62,8 +64,21 @@ class ExerciseService
     void updateExercise(int courseId, int exerciseNumber, const std::string& name,
                         const std::string& description, const std::string& fullDescription);
 
+    /// @brief Permanently deletes an exercise: its stored data and its source files.
+    ///
+    /// The number of the deleted exercise becomes free again. There is no undo,
+    /// so the workspace Git repository is the only safety net.
+    /// @param courseId The course number.
+    /// @param exerciseNumber The number of the exercise to delete.
+    /// @throws CourseNotFoundError if the course does not exist.
+    /// @throws ExerciseNotFoundError if the course has no exercise with this number.
+    /// @throws WorkspaceError if a file path is outside the workspace or a file cannot be removed.
+    /// @throws StorageError if the data cannot be read or written.
+    void deleteExercise(int courseId, int exerciseNumber);
+
   private:
     ICourseRepository& m_repository;
+    Workspace m_workspace;
 };
 
 } // namespace exercise_manager
