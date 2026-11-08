@@ -29,7 +29,7 @@ class ExerciseService
     ///         FileNaming::kMaxExerciseNumber).
     static int nextExerciseNumber(const Course& course);
 
-        /// @brief Adds a new exercise to a course.
+    /// @brief Adds a new exercise to a course.
     ///
     /// The new exercise gets the first free number. Only the stored data is
     /// updated here; the source files are generated elsewhere.
@@ -44,6 +44,23 @@ class ExerciseService
     /// @throws StorageError if the data cannot be read or written.
     int addExercise(int courseId, const std::string& name, const std::string& description,
                     const std::string& fullDescription);
+
+    /// @brief Changes the name and descriptions of an existing exercise.
+    ///
+    /// The exercise is found by its number, and the number never changes, so the
+    /// source files are not touched.
+    /// @param courseId The course number.
+    /// @param exerciseNumber The number of the exercise to change.
+    /// @param name New name (checked by NameValidator).
+    /// @param description New short description.
+    /// @param fullDescription New detailed description.
+    /// @throws InvalidExerciseNameError if the name is not allowed.
+    /// @throws CourseNotFoundError if the course does not exist.
+    /// @throws ExerciseNotFoundError if the course has no exercise with this number.
+    /// @throws DuplicateExerciseError if another exercise already uses this name.
+    /// @throws StorageError if the data cannot be read or written.
+    void updateExercise(int courseId, int exerciseNumber, const std::string& name,
+                        const std::string& description, const std::string& fullDescription);
 
   private:
     ICourseRepository& m_repository;

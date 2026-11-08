@@ -65,4 +65,34 @@ int ExerciseService::addExercise(int courseId, const std::string& name,
     return number;
 }
 
+void ExerciseService::updateExercise(int courseId, int exerciseNumber, const std::string& name,
+                                     const std::string& description,
+                                     const std::string& fullDescription)
+{
+    NameValidator::validate(name);
+
+    Course course = m_repository.load(courseId);
+
+    const auto target = std::find_if(course.exercises.begin(), course.exercises.end(),
+                                     [exerciseNumber](const Exercise& exercise)
+                                     { return exercise.number == exerciseNumber; });
+    if (target == course.exercises.end())
+    {
+        throw ExerciseNotFoundError("Exercise does not exist in this course.");
+    }
+
+    const bool duplicate =
+        std::any_of(course.exercises.begin(), course.exercises.end(), [&](const Exercise& other)
+                    { return other.number != exerciseNumber && other.name == name; });
+    if (duplicate)
+    {
+        throw DuplicateExerciseError("Another exercise already uses this name.");
+    }
+
+    target->name = name;
+    target->description = description;
+    target->fullDescription = fullDescription;
+    m_repository.save(course);
+}
+
 } // namespace exercise_manager

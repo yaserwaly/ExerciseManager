@@ -3,6 +3,7 @@
 #include "exercise_manager/Errors.h"
 #include "exercise_manager/FileNaming.h"
 #include "exercise_manager/ICourseRepository.h"
+using exercise_manager::ExerciseNotFoundError;
 
 #include <algorithm>
 #include <map>
@@ -163,4 +164,72 @@ TEST(ExerciseServiceTests, AddExerciseRejectsDuplicateName)
     service.addExercise(1, "adder", "", "");
     EXPECT_THROW(service.addExercise(1, "adder", "", ""), DuplicateExerciseError);
     EXPECT_EQ(repository.load(1).exercises.size(), 1u);
+}
+
+TEST(ExerciseServiceTests, UpdateExerciseChangesNameAndDescriptions)
+{
+    FakeCourseRepository repository;
+    repository.save(makeCourseWithNumbers({}));
+    ExerciseService service(repository);
+    service.addExercise(1, "adder", "old short", "old full");
+
+    service.updateExercise(1, 1, "sum", "new short", "new full");
+
+    const Course course = repository.load(1);
+    ASSERT_EQ(course.exercises.size(), 1u);
+    EXPECT_EQ(course.exercises[0].number, 1);
+    EXPECT_EQ(course.exercises[0].name, "sum");
+    EXPECT_EQ(course.exercises[0].description, "new short");
+    EXPECT_EQ(course.exercises[0].fullDescription, "new full");
+}
+
+TEST(ExerciseServiceTests, UpdateExerciseAllowsKeepingOwnName)
+{
+    FakeCourseRepository repository;
+    repository.save(makeCourseWithNumbers({}));
+    ExerciseService service(repository);
+    service.addExercise(1, "adder", "old", "old");
+
+    EXPECT_NO_THROW(service.updateExercise(1, 1, "adder", "new", "new"));
+    EXPECT_EQ(repository.load(1).exercises[0].description, "new");
+}
+
+TEST(ExerciseServiceTests, UpdateExerciseThrowsForMissingCourse)
+{
+    FakeCourseRepository repository;
+    ExerciseService service(repository);
+
+    EXPECT_THROW(service.updateExercise(5, 1, "adder", "", ""), CourseNotFoundError);
+}
+
+TEST(ExerciseServiceTests, UpdateExerciseThrowsForMissingExercise)
+{
+    FakeCourseRepository repository;
+    repository.save(makeCourseWithNumbers({}));
+    ExerciseService service(repository);
+
+    EXPECT_THROW(service.updateExercise(1, 7, "adder", "", ""), ExerciseNotFoundError);
+}
+
+TEST(ExerciseServiceTests, UpdateExerciseRejectsInvalidName)
+{
+    FakeCourseRepository repository;
+    repository.save(makeCourseWithNumbers({}));
+    ExerciseService service(repository);
+    service.addExercise(1, "adder", "", "");
+
+    EXPECT_THROW(service.updateExercise(1, 1, "bad/name", "", ""), InvalidExerciseNameError);
+    EXPECT_EQ(repository.load(1).exercises[0].name, "adder");
+}
+
+TEST(ExerciseServiceTests, UpdateExerciseRejectsNameOfAnotherExercise)
+{
+    FakeCourseRepository repository;
+    repository.save(makeCourseWithNumbers({}));
+    ExerciseService service(repository);
+    service.addExercise(1, "adder", "", "");
+    service.addExercise(1, "sum", "", "");
+
+    EXPECT_THROW(service.updateExercise(1, 2, "adder", "", ""), DuplicateExerciseError);
+    EXPECT_EQ(repository.load(1).exercises[1].name, "sum");
 }
