@@ -156,6 +156,7 @@
     <ClCompile Include="JsonCourseRepositoryTests.cpp" />
     <ClCompile Include="NameValidatorTests.cpp" />
     <ClCompile Include="PathGuardTests.cpp" />
+    <ClCompile Include="TemplateEngineTests.cpp" />
     <ClCompile Include="WorkspaceTests.cpp" />
   </ItemGroup>
   <ItemGroup>
