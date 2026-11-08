@@ -11,7 +11,8 @@ namespace exercise_manager
 /// exercise never touches its files.
 struct Exercise
 {
-    /// @brief Exercise number inside its course (starts at 1, never reused).
+    /// @brief Exercise number inside its course (starts at 1). The number of a deleted
+    /// exercise becomes free again, and a new exercise takes the first free number.
     int number = 0;
 
     /// @brief Short name chosen by the user (validated by NameValidator).
