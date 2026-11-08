@@ -28,6 +28,7 @@
     <ClInclude Include="include\exercise_manager\JsonCourseRepository.h" />
     <ClInclude Include="include\exercise_manager\NameValidator.h" />
     <ClInclude Include="include\exercise_manager\PathGuard.h" />
+    <ClInclude Include="include\exercise_manager\TemplateEngine.h" />
     <ClInclude Include="include\exercise_manager\Workspace.h" />
   </ItemGroup>
   <ItemGroup>
@@ -36,6 +37,7 @@
     <ClCompile Include="src\JsonCourseRepository.cpp" />
     <ClCompile Include="src\NameValidator.cpp" />
     <ClCompile Include="src\PathGuard.cpp" />
+    <ClCompile Include="src\TemplateEngine.cpp" />
     <ClCompile Include="src\Workspace.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
