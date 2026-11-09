@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\exercise_manager\CodeGenerator.h" />
     <ClInclude Include="include\exercise_manager\Course.h" />
     <ClInclude Include="include\exercise_manager\Errors.h" />
     <ClInclude Include="include\exercise_manager\Exercise.h" />
@@ -29,9 +30,11 @@
     <ClInclude Include="include\exercise_manager\NameValidator.h" />
     <ClInclude Include="include\exercise_manager\PathGuard.h" />
     <ClInclude Include="include\exercise_manager\TemplateEngine.h" />
+    <ClInclude Include="include\exercise_manager\Templates.h" />
     <ClInclude Include="include\exercise_manager\Workspace.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\CodeGenerator.cpp" />
     <ClCompile Include="src\ExerciseService.cpp" />
     <ClCompile Include="src\FileNaming.cpp" />
     <ClCompile Include="src\JsonCourseRepository.cpp" />
