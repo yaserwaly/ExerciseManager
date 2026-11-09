@@ -29,6 +29,7 @@
     <ClInclude Include="include\exercise_manager\NameValidator.h" />
     <ClInclude Include="include\exercise_manager\PathGuard.h" />
     <ClInclude Include="include\exercise_manager\TemplateEngine.h" />
+    <ClInclude Include="include\exercise_manager\Templates.h" />
     <ClInclude Include="include\exercise_manager\Workspace.h" />
   </ItemGroup>
   <ItemGroup>
