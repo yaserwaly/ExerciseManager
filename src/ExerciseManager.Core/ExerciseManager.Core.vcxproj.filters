@@ -72,4 +72,8 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\templates\exercise.hpp.tpl" />
+    <None Include="resources\templates\exercise.cpp.tpl" />
+  </ItemGroup>
 </Project>

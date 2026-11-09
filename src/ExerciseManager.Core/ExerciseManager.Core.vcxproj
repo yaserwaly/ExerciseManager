@@ -40,6 +40,10 @@
     <ClCompile Include="src\TemplateEngine.cpp" />
     <ClCompile Include="src\Workspace.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\templates\exercise.cpp.tpl" />
+    <None Include="resources\templates\exercise.hpp.tpl" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
