@@ -26,6 +26,8 @@ using exercise_manager::FileNaming;
 using exercise_manager::ICourseRepository;
 using exercise_manager::InvalidExerciseNameError;
 using exercise_manager::Workspace;
+using exercise_manager::StorageError;
+using exercise_manager::WorkspaceError;
 
 namespace
 {
@@ -59,7 +61,16 @@ class FakeCourseRepository : public ICourseRepository
 
     void save(const Course& course) override
     {
+        if (m_failOnSave)
+        {
+            throw StorageError("Could not write.");
+        }
         m_courses[course.id] = course;
+    }
+
+    void setFailOnSave(bool fail)
+    {
+        m_failOnSave = fail;
     }
 
     bool exists(int courseId) const override
@@ -79,6 +90,7 @@ class FakeCourseRepository : public ICourseRepository
 
   private:
     std::map<int, Course> m_courses;
+    bool m_failOnSave = false;
 };
 
 // Gives every test its own temporary workspace and an in-memory repository.
@@ -329,4 +341,73 @@ TEST_F(ExerciseServiceFixture, DeleteExerciseThrowsForMissingExercise)
     m_repository.save(makeCourseWithNumbers({}));
 
     EXPECT_THROW(m_service->deleteExercise(1, 7), ExerciseNotFoundError);
+}
+
+// ---------- addExercise generates the source files ----------
+
+TEST_F(ExerciseServiceFixture, AddExerciseGeneratesSourceFiles)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+
+    m_service->addExercise(1, "adder", "", "");
+
+    EXPECT_TRUE(fs::is_regular_file(headerPath(1, 1)));
+    EXPECT_TRUE(fs::is_regular_file(sourcePath(1, 1)));
+}
+
+TEST_F(ExerciseServiceFixture, AddExerciseGeneratesFilesForTheNewNumber)
+{
+    m_repository.save(makeCourseWithNumbers({1, 3}));
+
+    EXPECT_EQ(m_service->addExercise(1, "gap filler", "", ""), 2);
+
+    EXPECT_TRUE(fs::is_regular_file(headerPath(1, 2)));
+    EXPECT_TRUE(fs::is_regular_file(sourcePath(1, 2)));
+}
+
+TEST_F(ExerciseServiceFixture, AddExerciseKeepsExistingFileAndDataWhenFileExists)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    createFiles(1, 1);
+
+    EXPECT_THROW(m_service->addExercise(1, "adder", "", ""), WorkspaceError);
+
+    EXPECT_TRUE(m_repository.load(1).exercises.empty());
+    std::ifstream in(headerPath(1, 1));
+    std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    EXPECT_EQ(content, "// header");
+}
+
+TEST_F(ExerciseServiceFixture, AddExerciseGeneratesNoFilesForInvalidName)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+
+    EXPECT_THROW(m_service->addExercise(1, "bad/name", "", ""), InvalidExerciseNameError);
+
+    EXPECT_FALSE(fs::exists(headerPath(1, 1)));
+    EXPECT_FALSE(fs::exists(sourcePath(1, 1)));
+}
+
+TEST_F(ExerciseServiceFixture, AddExerciseGeneratesNoFilesForDuplicateName)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "", "");
+
+    EXPECT_THROW(m_service->addExercise(1, "adder", "", ""), DuplicateExerciseError);
+
+    EXPECT_FALSE(fs::exists(headerPath(1, 2)));
+    EXPECT_FALSE(fs::exists(sourcePath(1, 2)));
+}
+
+TEST_F(ExerciseServiceFixture, AddExerciseRemovesNewFilesWhenSavingFails)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_repository.setFailOnSave(true);
+
+    EXPECT_THROW(m_service->addExercise(1, "adder", "", ""), StorageError);
+
+    EXPECT_FALSE(fs::exists(headerPath(1, 1)));
+    EXPECT_FALSE(fs::exists(sourcePath(1, 1)));
+    m_repository.setFailOnSave(false);
+    EXPECT_TRUE(m_repository.load(1).exercises.empty());
 }

@@ -13,7 +13,7 @@ namespace exercise_manager
 {
 
 ExerciseService::ExerciseService(ICourseRepository& repository, const Workspace& workspace)
-    : m_repository(repository), m_workspace(workspace)
+    : m_repository(repository), m_workspace(workspace), m_generator(workspace)
 {
 }
 
@@ -62,9 +62,25 @@ int ExerciseService::addExercise(int courseId, const std::string& name,
         throw DuplicateExerciseError("An exercise with this name already exists.");
     }
 
-    const int number = nextExerciseNumber(course);
+        const int number = nextExerciseNumber(course);
+
+    // Files first: if this fails, the stored data is still unchanged.
+    m_generator.generateExerciseFiles(courseId, number);
+
     course.exercises.push_back(Exercise{number, name, description, fullDescription});
-    m_repository.save(course);
+    try
+    {
+        m_repository.save(course);
+    }
+    catch (...)
+    {
+        // Do not leave files of an exercise that was never stored.
+        const std::filesystem::path courseDir = m_workspace.courseDir(courseId);
+        std::error_code ignored;
+        std::filesystem::remove(courseDir / FileNaming::headerFileName(courseId, number), ignored);
+        std::filesystem::remove(courseDir / FileNaming::sourceFileName(courseId, number), ignored);
+        throw;
+    }
     return number;
 }
 

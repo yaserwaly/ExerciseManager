@@ -3,6 +3,7 @@
 #include "exercise_manager/Course.h"
 #include "exercise_manager/ICourseRepository.h"
 #include "exercise_manager/Workspace.h"
+#include "exercise_manager/CodeGenerator.h"
 
 #include <string>
 
@@ -33,8 +34,8 @@ class ExerciseService
 
     /// @brief Adds a new exercise to a course.
     ///
-    /// The new exercise gets the first free number. Only the stored data is
-    /// updated here; the source files are generated elsewhere.
+    /// The new exercise gets the first free number. The source files are generated
+    /// first, then the data is stored. If storing fails, the new files are removed again.
     /// @param courseId The course number.
     /// @param name Exercise name (checked by NameValidator).
     /// @param description Short description.
@@ -43,7 +44,8 @@ class ExerciseService
     /// @throws InvalidExerciseNameError if the name is not allowed or the course is full.
     /// @throws CourseNotFoundError if the course does not exist.
     /// @throws DuplicateExerciseError if the course already has an exercise with this name.
-    /// @throws StorageError if the data cannot be read or written.
+    /// @throws WorkspaceError if a source file for this number already exists.
+    /// @throws StorageError if the data or a source file cannot be read or written.
     int addExercise(int courseId, const std::string& name, const std::string& description,
                     const std::string& fullDescription);
 
@@ -79,6 +81,7 @@ class ExerciseService
   private:
     ICourseRepository& m_repository;
     Workspace m_workspace;
+    CodeGenerator m_generator;
 };
 
 } // namespace exercise_manager
