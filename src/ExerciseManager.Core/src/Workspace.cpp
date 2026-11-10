@@ -69,7 +69,6 @@ void Workspace::initialize() const
     createFolder(root());
     createFolder(coursesDir());
     createFolder(sharedDir());
-    createFolder(deletedDir());
     createFolder(buildDir());
 }
 
@@ -86,11 +85,6 @@ fs::path Workspace::coursesDir() const
 fs::path Workspace::sharedDir() const
 {
     return root() / kSharedFolder;
-}
-
-fs::path Workspace::deletedDir() const
-{
-    return root() / kDeletedFolder;
 }
 
 fs::path Workspace::buildDir() const

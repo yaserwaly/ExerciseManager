@@ -17,7 +17,6 @@ namespace exercise_manager
 ///   Courses/Course01/Exercises.json   exercises of one course
 ///   Courses/Course01/C01Exercise001.hpp, ...
 ///   shared/      shared libraries for exercises
-///   _deleted/    deleted exercises (never wiped)
 ///   build/       build output
 /// @endcode
 class Workspace
@@ -29,7 +28,6 @@ public:
     /// @brief Folder names inside the workspace.
     static constexpr const char* kCoursesFolder = "Courses";
     static constexpr const char* kSharedFolder = "shared";
-    static constexpr const char* kDeletedFolder = "_deleted";
     static constexpr const char* kBuildFolder = "build";
 
     /// @brief File name of the list of all courses, inside the Courses folder.
@@ -60,13 +58,10 @@ public:
     /// @brief Folder of the shared libraries.
     std::filesystem::path sharedDir() const;
 
-    /// @brief Folder where deleted exercises are moved.
-    std::filesystem::path deletedDir() const;
-
     /// @brief Folder for build output.
     std::filesystem::path buildDir() const;
 
-        /// @brief Folder of one course, e.g. `<workspace>/Courses/Course01`.
+    /// @brief Folder of one course, e.g. `<workspace>/Courses/Course01`.
     /// @throws InvalidExerciseNameError if the course number is out of range.
     std::filesystem::path courseDir(int courseId) const;
 
