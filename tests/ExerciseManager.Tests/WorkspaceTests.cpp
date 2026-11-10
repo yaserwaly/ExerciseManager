@@ -60,7 +60,6 @@ TEST_F(WorkspaceTests, InitializeCreatesFolderLayout)
     EXPECT_TRUE(fs::is_directory(workspace.root()));
     EXPECT_TRUE(fs::is_directory(workspace.coursesDir()));
     EXPECT_TRUE(fs::is_directory(workspace.sharedDir()));
-    EXPECT_TRUE(fs::is_directory(workspace.deletedDir()));
     EXPECT_TRUE(fs::is_directory(workspace.buildDir()));
 }
 
@@ -81,7 +80,6 @@ TEST_F(WorkspaceTests, FoldersAreInsideTheRoot)
     const Workspace workspace(m_root);
     EXPECT_EQ(workspace.coursesDir(), workspace.root() / "Courses");
     EXPECT_EQ(workspace.sharedDir(), workspace.root() / "shared");
-    EXPECT_EQ(workspace.deletedDir(), workspace.root() / "_deleted");
     EXPECT_EQ(workspace.buildDir(), workspace.root() / "build");
 }
 

@@ -20,3 +20,4 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Exercise number comment updated: deleted numbers are now reused.
+- Removed the unused `_deleted` folder from `Workspace` (`kDeletedFolder`, `deletedDir()` and its creation in `initialize()`), because exercises are now deleted permanently.
