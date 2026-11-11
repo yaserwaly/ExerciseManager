@@ -25,8 +25,10 @@
     <ClInclude Include="include\exercise_manager\Exercise.h" />
     <ClInclude Include="include\exercise_manager\ExerciseService.h" />
     <ClInclude Include="include\exercise_manager\FileNaming.h" />
+    <ClInclude Include="include\exercise_manager\IBuildRunner.h" />
     <ClInclude Include="include\exercise_manager\ICourseRepository.h" />
     <ClInclude Include="include\exercise_manager\JsonCourseRepository.h" />
+    <ClInclude Include="include\exercise_manager\MsvcBuildRunner.h" />
     <ClInclude Include="include\exercise_manager\NameValidator.h" />
     <ClInclude Include="include\exercise_manager\PathGuard.h" />
     <ClInclude Include="include\exercise_manager\TemplateEngine.h" />
@@ -38,6 +40,7 @@
     <ClCompile Include="src\ExerciseService.cpp" />
     <ClCompile Include="src\FileNaming.cpp" />
     <ClCompile Include="src\JsonCourseRepository.cpp" />
+    <ClCompile Include="src\MsvcBuildRunner.cpp" />
     <ClCompile Include="src\NameValidator.cpp" />
     <ClCompile Include="src\PathGuard.cpp" />
     <ClCompile Include="src\TemplateEngine.cpp" />

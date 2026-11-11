@@ -39,6 +39,21 @@ namespace {{Namespace}} {
 
 }
 )";
+
+    
+    /// @brief Template of the temporary launcher (`build/launcher.cpp`).
+    ///
+    /// It only includes the exercise header and calls `Run()`. The file is generated
+    /// for every run, written into the build folder and never committed.
+    /// Placeholders: `{{Namespace}}` and `{{ClassName}}`.
+    static constexpr std::string_view kLauncherSource = R"(#include "{{Namespace}}.hpp"
+
+int main()
+{
+    {{Namespace}}::{{ClassName}}::Run();
+    return 0;
+}
+)";
 };
 
 } // namespace exercise_manager

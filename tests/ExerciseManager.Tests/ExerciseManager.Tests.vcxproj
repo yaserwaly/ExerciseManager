@@ -155,6 +155,7 @@
     <ClCompile Include="ExerciseServiceTests.cpp" />
     <ClCompile Include="FileNamingTests.cpp" />
     <ClCompile Include="JsonCourseRepositoryTests.cpp" />
+    <ClCompile Include="MsvcBuildRunnerTests.cpp" />
     <ClCompile Include="NameValidatorTests.cpp" />
     <ClCompile Include="PathGuardTests.cpp" />
     <ClCompile Include="TemplateEngineTests.cpp" />

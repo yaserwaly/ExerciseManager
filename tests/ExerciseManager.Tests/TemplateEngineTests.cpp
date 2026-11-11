@@ -1,6 +1,6 @@
 #include "exercise_manager/TemplateEngine.h"
-
 #include "exercise_manager/Errors.h"
+#include "exercise_manager/Templates.h"
 
 #include <gtest/gtest.h>
 
@@ -8,6 +8,7 @@
 
 using exercise_manager::StorageError;
 using exercise_manager::TemplateEngine;
+using exercise_manager::Templates;
 
 TEST(TemplateEngineTests, ReplacesOnePlaceholder)
 {
@@ -64,4 +65,23 @@ TEST(TemplateEngineTests, ThrowsForUnclosedPlaceholder)
 {
     EXPECT_THROW(TemplateEngine::render("namespace {{Namespace", {{"Namespace", "x"}}),
                  StorageError);
+}
+
+TEST(TemplateEngineTests, LauncherTemplateIncludesHeaderAndCallsRun)
+{
+    const TemplateEngine::Values values{{"Namespace", "C02Exercise013"},
+                                        {"ClassName", "ClsC02Exercise013"}};
+    const std::string text = TemplateEngine::render(Templates::kLauncherSource, values);
+
+    EXPECT_NE(text.find("#include \"C02Exercise013.hpp\""), std::string::npos);
+    EXPECT_NE(text.find("int main()"), std::string::npos);
+    EXPECT_NE(text.find("C02Exercise013::ClsC02Exercise013::Run();"), std::string::npos);
+    EXPECT_EQ(text.find("{{"), std::string::npos);
+}
+
+TEST(TemplateEngineTests, LauncherTemplateNeedsNoNumber)
+{
+    const TemplateEngine::Values values{{"Namespace", "C01Exercise001"},
+                                        {"ClassName", "ClsC01Exercise001"}};
+    EXPECT_NO_THROW(TemplateEngine::render(Templates::kLauncherSource, values));
 }
