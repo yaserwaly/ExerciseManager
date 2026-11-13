@@ -245,3 +245,56 @@ TEST_F(JsonCourseRepositoryTests, ListCourseIdsIgnoresFoldersThatAreNotListed)
     ASSERT_EQ(ids.size(), 1u);
     EXPECT_EQ(ids[0], 1);
 }
+
+TEST_F(JsonCourseRepositoryTests, RemoveDeletesCourseFromList)
+{
+    m_repository->save(makeCourse(1));
+
+    m_repository->remove(1);
+
+    EXPECT_FALSE(m_repository->exists(1));
+    EXPECT_TRUE(m_repository->listCourseIds().empty());
+    EXPECT_THROW(m_repository->load(1), CourseNotFoundError);
+}
+
+TEST_F(JsonCourseRepositoryTests, RemoveKeepsOtherCourses)
+{
+    m_repository->save(makeCourse(1));
+    m_repository->save(makeCourse(2));
+    m_repository->save(makeCourse(3));
+
+    m_repository->remove(2);
+
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{1, 3}));
+    EXPECT_EQ(m_repository->load(1).name, "C++ Basics");
+    EXPECT_EQ(m_repository->load(3).exercises.size(), 2u);
+}
+
+TEST_F(JsonCourseRepositoryTests, RemoveMissingCourseThrowsCourseNotFound)
+{
+    m_repository->save(makeCourse(1));
+
+    EXPECT_THROW(m_repository->remove(5), CourseNotFoundError);
+    EXPECT_TRUE(m_repository->exists(1));
+}
+
+TEST_F(JsonCourseRepositoryTests, RemoveLeavesNoTemporaryFile)
+{
+    m_repository->save(makeCourse(1));
+
+    m_repository->remove(1);
+
+    fs::path tempCourses = m_workspace->coursesFile();
+    tempCourses += ".tmp";
+    EXPECT_FALSE(fs::exists(tempCourses));
+}
+
+TEST_F(JsonCourseRepositoryTests, RemoveDoesNotTouchTheCourseFolderFiles)
+{
+    m_repository->save(makeCourse(1));
+
+    m_repository->remove(1);
+
+    // The repository only changes the list. Deleting the folder is the service's job.
+    EXPECT_TRUE(fs::is_regular_file(m_workspace->exercisesFile(1)));
+}

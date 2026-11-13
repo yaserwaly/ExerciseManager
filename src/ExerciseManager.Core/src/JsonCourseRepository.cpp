@@ -298,6 +298,22 @@ void JsonCourseRepository::save(const Course& course)
     writeJsonFile(m_workspace.coursesFile(), coursesToJson(entries));
 }
 
+void JsonCourseRepository::remove(int courseId)
+{
+    std::vector<CourseEntry> entries = readCourseEntries(m_workspace);
+
+    const auto it =
+        std::find_if(entries.begin(), entries.end(),
+                     [courseId](const CourseEntry& entry) { return entry.id == courseId; });
+    if (it == entries.end())
+    {
+        throw CourseNotFoundError("Course does not exist.");
+    }
+
+    entries.erase(it);
+    writeJsonFile(m_workspace.coursesFile(), coursesToJson(entries));
+}
+
 std::vector<int> JsonCourseRepository::listCourseIds() const
 {
     const std::vector<CourseEntry> entries = readCourseEntries(m_workspace);
