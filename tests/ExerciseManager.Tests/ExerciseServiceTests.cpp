@@ -78,6 +78,14 @@ class FakeCourseRepository : public ICourseRepository
         return m_courses.count(courseId) > 0;
     }
 
+    void remove(int courseId) override
+    {
+        if (m_courses.erase(courseId) == 0)
+        {
+            throw CourseNotFoundError("Course does not exist.");
+        }
+    }
+
     std::vector<int> listCourseIds() const override
     {
         std::vector<int> ids;

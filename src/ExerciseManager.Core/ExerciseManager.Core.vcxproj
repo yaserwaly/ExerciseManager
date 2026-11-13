@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="include\exercise_manager\CodeGenerator.h" />
     <ClInclude Include="include\exercise_manager\Course.h" />
+    <ClInclude Include="include\exercise_manager\CourseService.h" />
     <ClInclude Include="include\exercise_manager\Errors.h" />
     <ClInclude Include="include\exercise_manager\Exercise.h" />
     <ClInclude Include="include\exercise_manager\ExerciseService.h" />
@@ -37,6 +38,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\CodeGenerator.cpp" />
+    <ClCompile Include="src\CourseService.cpp" />
     <ClCompile Include="src\ExerciseService.cpp" />
     <ClCompile Include="src\FileNaming.cpp" />
     <ClCompile Include="src\JsonCourseRepository.cpp" />

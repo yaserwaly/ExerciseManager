@@ -33,6 +33,13 @@ public:
     using ExerciseManagerError::ExerciseManagerError;
 };
 
+/// @brief Thrown when a course with the same name already exists.
+class DuplicateCourseError : public ExerciseManagerError
+{
+  public:
+    using ExerciseManagerError::ExerciseManagerError;
+};
+
 /// @brief Thrown when an exercise name is not allowed.
 class InvalidExerciseNameError : public ExerciseManagerError
 {

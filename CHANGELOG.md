@@ -21,6 +21,10 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Launcher template (`Templates::kLauncherSource`), generated into the workspace `build` folder for every run.
 - A failed build throws `BuildError` with the compiler output, and a stale exe is never run.
 - Shared sources: every `.cpp` directly inside the workspace `shared` folder is compiled with the exercise.
+- Course service (`CourseService`): add, update, list and permanently delete courses (stored data and the course folder).
+- Course numbering: a new course takes the first free number (1 to 99), and a deleted number is reused.
+- Course names are checked by `NameValidator`, and a name already used by another course is rejected with the new `DuplicateCourseError`.
+- `ICourseRepository::remove` and `JsonCourseRepository::remove`: remove a course from `Courses.json` (the course folder is deleted by the service).
 
 ### Changed
 - Exercise number comment updated: deleted numbers are now reused.

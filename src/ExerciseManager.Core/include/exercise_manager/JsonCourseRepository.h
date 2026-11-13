@@ -52,6 +52,9 @@ public:
     /// @copydoc ICourseRepository::exists
     bool exists(int courseId) const override;
 
+    /// @copydoc ICourseRepository::remove
+    void remove(int courseId) override;
+
     /// @copydoc ICourseRepository::listCourseIds
     std::vector<int> listCourseIds() const override;
 

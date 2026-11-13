@@ -32,6 +32,14 @@ class ICourseRepository
     /// @param courseId The course number.
     virtual bool exists(int courseId) const = 0;
 
+    /// @brief Removes a course from the list of stored courses.
+    ///
+    /// Only the stored data is changed. Files and folders of the course are not touched.
+    /// @param courseId The course number.
+    /// @throws CourseNotFoundError if the course does not exist.
+    /// @throws StorageError if the stored data cannot be read or written.
+    virtual void remove(int courseId) = 0;
+
     /// @brief Lists the numbers of all stored courses, sorted ascending.
     virtual std::vector<int> listCourseIds() const = 0;
 };
