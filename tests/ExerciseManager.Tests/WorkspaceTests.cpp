@@ -133,3 +133,19 @@ TEST_F(WorkspaceTests, BuildsExercisesFilePath)
               workspace.root() / "Courses" / "Course10" / "Exercises.json");
     EXPECT_THROW(workspace.exercisesFile(0), InvalidExerciseNameError);
 }
+
+TEST_F(WorkspaceTests, BuildsDefaultCourseFilePath)
+{
+    const Workspace workspace(m_root);
+    EXPECT_EQ(workspace.defaultCourseFile(), workspace.root() / "Courses" / "DefaultCourse.json");
+}
+
+TEST_F(WorkspaceTests, BuildsDefaultExerciseFilePath)
+{
+    const Workspace workspace(m_root);
+    EXPECT_EQ(workspace.defaultExerciseFile(1),
+              workspace.root() / "Courses" / "Course01" / "DefaultExercise.json");
+    EXPECT_EQ(workspace.defaultExerciseFile(10),
+              workspace.root() / "Courses" / "Course10" / "DefaultExercise.json");
+    EXPECT_THROW(workspace.defaultExerciseFile(0), InvalidExerciseNameError);
+}

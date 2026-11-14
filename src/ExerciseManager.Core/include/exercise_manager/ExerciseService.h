@@ -4,6 +4,7 @@
 #include "exercise_manager/ICourseRepository.h"
 #include "exercise_manager/Workspace.h"
 #include "exercise_manager/CodeGenerator.h"
+#include "exercise_manager/DefaultsStore.h"
 
 #include <string>
 
@@ -71,6 +72,7 @@ class ExerciseService
     /// The number of the deleted exercise becomes free again. There is no undo,
     /// so the workspace Git repository is the only safety net.
     /// @param courseId The course number.
+    /// If it is the default exercise of the course, the default is cleared too.
     /// @param exerciseNumber The number of the exercise to delete.
     /// @throws CourseNotFoundError if the course does not exist.
     /// @throws ExerciseNotFoundError if the course has no exercise with this number.
@@ -82,6 +84,7 @@ class ExerciseService
     ICourseRepository& m_repository;
     Workspace m_workspace;
     CodeGenerator m_generator;
+    DefaultsStore m_defaults;
 };
 
 } // namespace exercise_manager
