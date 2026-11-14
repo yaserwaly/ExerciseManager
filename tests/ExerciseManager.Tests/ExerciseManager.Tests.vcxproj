@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClCompile Include="CodeGeneratorTests.cpp" />
     <ClCompile Include="CourseServiceTests.cpp" />
+    <ClCompile Include="DefaultsStoreTests.cpp" />
     <ClCompile Include="ExerciseServiceTests.cpp" />
     <ClCompile Include="FileNamingTests.cpp" />
     <ClCompile Include="JsonCourseRepositoryTests.cpp" />

@@ -4,6 +4,7 @@
 #include "exercise_manager/FileNaming.h"
 #include "exercise_manager/ICourseRepository.h"
 #include "exercise_manager/Workspace.h"
+#include "exercise_manager/DefaultsStore.h"
 
 #include <gtest/gtest.h>
 
@@ -25,6 +26,7 @@ using exercise_manager::FileNaming;
 using exercise_manager::ICourseRepository;
 using exercise_manager::InvalidExerciseNameError;
 using exercise_manager::Workspace;
+using exercise_manager::DefaultsStore;
 
 namespace
 {
@@ -332,4 +334,56 @@ TEST_F(CourseServiceFixture, DeletedNumberIsReusedByNextCourse)
 TEST_F(CourseServiceFixture, DeleteCourseThrowsForMissingCourse)
 {
     EXPECT_THROW(m_service->deleteCourse(5), CourseNotFoundError);
+}
+
+TEST_F(CourseServiceFixture, DeleteCourseClearsItsDefaultCourse)
+{
+    m_service->addCourse("first", "", "");
+    DefaultsStore(*m_workspace).saveDefaultCourse(1);
+
+    m_service->deleteCourse(1);
+
+    EXPECT_FALSE(DefaultsStore(*m_workspace).loadDefaultCourse().has_value());
+}
+
+TEST_F(CourseServiceFixture, DeleteCourseKeepsDefaultOfAnotherCourse)
+{
+    m_service->addCourse("first", "", "");
+    m_service->addCourse("second", "", "");
+    DefaultsStore(*m_workspace).saveDefaultCourse(2);
+
+    m_service->deleteCourse(1);
+
+    EXPECT_EQ(DefaultsStore(*m_workspace).loadDefaultCourse(), 2);
+}
+
+TEST_F(CourseServiceFixture, DeleteCourseRemovesItsDefaultExercise)
+{
+    m_service->addCourse("first", "", "");
+    createCourseFolder(1);
+    DefaultsStore(*m_workspace).saveDefaultExercise(1, 1);
+
+    m_service->deleteCourse(1);
+
+    EXPECT_FALSE(fs::exists(m_workspace->defaultExerciseFile(1)));
+}
+
+TEST_F(CourseServiceFixture, DeletedCourseNumberDoesNotInheritTheDefault)
+{
+    m_service->addCourse("first", "", "");
+    DefaultsStore(*m_workspace).saveDefaultCourse(1);
+    m_service->deleteCourse(1);
+
+    EXPECT_EQ(m_service->addCourse("third", "", ""), 1);
+
+    EXPECT_FALSE(DefaultsStore(*m_workspace).loadDefaultCourse().has_value());
+}
+
+TEST_F(CourseServiceFixture, DeleteCourseWorksWhenDefaultFileIsCorrupt)
+{
+    m_service->addCourse("first", "", "");
+    std::ofstream(m_workspace->defaultCourseFile()) << "this is not json";
+
+    EXPECT_NO_THROW(m_service->deleteCourse(1));
+    EXPECT_FALSE(m_repository.exists(1));
 }

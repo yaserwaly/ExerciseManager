@@ -15,6 +15,8 @@ namespace exercise_manager
 /// <workspace>/
 ///   Courses/Courses.json              all courses (id, name, description)
 ///   Courses/Course01/Exercises.json   exercises of one course
+///   Courses/DefaultCourse.json        the default course (optional)
+///   Courses/Course01/DefaultExercise.json   default exercise of one course (optional)
 ///   Courses/Course01/C01Exercise001.hpp, ...
 ///   shared/      shared libraries for exercises
 ///   build/       build output
@@ -35,6 +37,12 @@ public:
 
     /// @brief File name of the exercises list, inside a course folder.
     static constexpr const char* kExercisesFileName = "Exercises.json";
+
+    /// @brief File name of the default course, inside the Courses folder.
+    static constexpr const char* kDefaultCourseFileName = "DefaultCourse.json";
+
+    /// @brief File name of the default exercise, inside a course folder.
+    static constexpr const char* kDefaultExerciseFileName = "DefaultExercise.json";
 
     /// @brief Creates a workspace object for a folder. Nothing is created on disk yet.
     /// @param root The workspace folder (it may not exist yet).
@@ -71,6 +79,14 @@ public:
     /// @brief Exercises file of one course, e.g. `<workspace>/Courses/Course01/Exercises.json`.
     /// @throws InvalidExerciseNameError if the course number is out of range.
     std::filesystem::path exercisesFile(int courseId) const;
+
+    /// @brief File that stores the default course, e.g. `<workspace>/Courses/DefaultCourse.json`.
+    std::filesystem::path defaultCourseFile() const;
+
+    /// @brief File that stores the default exercise of one course,
+    /// e.g. `<workspace>/Courses/Course01/DefaultExercise.json`.
+    /// @throws InvalidExerciseNameError if the course number is out of range.
+    std::filesystem::path defaultExerciseFile(int courseId) const;
 
     /// @brief The guard that checks paths stay inside this workspace.
     const PathGuard& guard() const noexcept;

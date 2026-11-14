@@ -3,6 +3,7 @@
 #include "exercise_manager/Course.h"
 #include "exercise_manager/ICourseRepository.h"
 #include "exercise_manager/Workspace.h"
+#include "exercise_manager/DefaultsStore.h"
 
 #include <string>
 #include <vector>
@@ -63,6 +64,8 @@ class CourseService
     /// The number of the deleted course becomes free again. There is no undo, so the
     /// workspace Git repository is the only safety net. The confirmation question
     /// belongs to the CLI, not to this class.
+    /// If it is the default course, the default is cleared too (a deleted number is
+    /// reused, so it must not stay the default).
     /// @param courseId The course number.
     /// @throws CourseNotFoundError if the course does not exist.
     /// @throws WorkspaceError if the folder path is outside the workspace or cannot be removed.
@@ -77,6 +80,7 @@ class CourseService
   private:
     ICourseRepository& m_repository;
     Workspace m_workspace;
+    DefaultsStore m_defaults;
 };
 
 } // namespace exercise_manager

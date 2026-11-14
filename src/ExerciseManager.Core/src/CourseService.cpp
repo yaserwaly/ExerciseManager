@@ -33,7 +33,7 @@ bool nameUsedByAnotherCourse(const ICourseRepository& repository, const std::vec
 } // namespace
 
 CourseService::CourseService(ICourseRepository& repository, const Workspace& workspace)
-    : m_repository(repository), m_workspace(workspace)
+    : m_repository(repository), m_workspace(workspace), m_defaults(workspace)
 {
 }
 
@@ -116,6 +116,23 @@ void CourseService::deleteCourse(int courseId)
     // Data first: a leftover folder is better than a listed course without files.
     m_repository.remove(courseId);
 
+    // The number of a deleted course is reused, so it must not stay the default.
+    // A corrupt defaults file is ignored here: the CLI asks the user to reset it.
+    std::optional<int> defaultCourse;
+    try
+    {
+        defaultCourse = m_defaults.loadDefaultCourse();
+    }
+    catch (const StorageError&)
+    {
+        defaultCourse.reset();
+    }
+    if (defaultCourse == courseId)
+    {
+        m_defaults.clearDefaultCourse();
+    }
+
+    // The default exercise of this course lives inside the folder, so it goes with it.
     std::error_code error;
     std::filesystem::remove_all(courseDir, error); // a missing folder is not an error
     if (error)

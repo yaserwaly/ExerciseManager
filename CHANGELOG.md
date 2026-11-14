@@ -25,6 +25,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Course numbering: a new course takes the first free number (1 to 99), and a deleted number is reused.
 - Course names are checked by `NameValidator`, and a name already used by another course is rejected with the new `DuplicateCourseError`.
 - `ICourseRepository::remove` and `JsonCourseRepository::remove`: remove a course from `Courses.json` (the course folder is deleted by the service).
+- Defaults store (`DefaultsStore`): saves the default course in `Courses/DefaultCourse.json` and the default exercise of each course in `CourseNN/DefaultExercise.json`. It stores numbers only, writes safely through a temporary file, and a missing file means "no default".
+- `Workspace::defaultCourseFile()` and `Workspace::defaultExerciseFile()`, with the file name constants.
+- Deleting a course or an exercise also clears it as the default, because deleted numbers are reused: `CourseService::deleteCourse` clears the default course, and `ExerciseService::deleteExercise` clears the default exercise of its course.
 
 ### Changed
 - Exercise number comment updated: deleted numbers are now reused.

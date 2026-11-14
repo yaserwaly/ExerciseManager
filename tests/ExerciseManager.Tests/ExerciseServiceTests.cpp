@@ -4,6 +4,7 @@
 #include "exercise_manager/FileNaming.h"
 #include "exercise_manager/ICourseRepository.h"
 #include "exercise_manager/Workspace.h"
+#include "exercise_manager/DefaultsStore.h"
 
 #include <gtest/gtest.h>
 
@@ -28,6 +29,7 @@ using exercise_manager::InvalidExerciseNameError;
 using exercise_manager::Workspace;
 using exercise_manager::StorageError;
 using exercise_manager::WorkspaceError;
+using exercise_manager::DefaultsStore;
 
 namespace
 {
@@ -417,5 +419,51 @@ TEST_F(ExerciseServiceFixture, AddExerciseRemovesNewFilesWhenSavingFails)
     EXPECT_FALSE(fs::exists(headerPath(1, 1)));
     EXPECT_FALSE(fs::exists(sourcePath(1, 1)));
     m_repository.setFailOnSave(false);
+    EXPECT_TRUE(m_repository.load(1).exercises.empty());
+}
+
+TEST_F(ExerciseServiceFixture, DeleteExerciseClearsItsDefaultExercise)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "", "");
+    DefaultsStore(*m_workspace).saveDefaultExercise(1, 1);
+
+    m_service->deleteExercise(1, 1);
+
+    EXPECT_FALSE(DefaultsStore(*m_workspace).loadDefaultExercise(1).has_value());
+}
+
+TEST_F(ExerciseServiceFixture, DeleteExerciseKeepsDefaultOfAnotherExercise)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "", "");
+    m_service->addExercise(1, "sum", "", "");
+    DefaultsStore(*m_workspace).saveDefaultExercise(1, 2);
+
+    m_service->deleteExercise(1, 1);
+
+    EXPECT_EQ(DefaultsStore(*m_workspace).loadDefaultExercise(1), 2);
+}
+
+TEST_F(ExerciseServiceFixture, DeletedExerciseNumberDoesNotInheritTheDefault)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "", "");
+    m_service->addExercise(1, "sum", "", "");
+    DefaultsStore(*m_workspace).saveDefaultExercise(1, 1);
+    m_service->deleteExercise(1, 1);
+
+    EXPECT_EQ(m_service->addExercise(1, "product", "", ""), 1);
+
+    EXPECT_FALSE(DefaultsStore(*m_workspace).loadDefaultExercise(1).has_value());
+}
+
+TEST_F(ExerciseServiceFixture, DeleteExerciseWorksWhenDefaultFileIsCorrupt)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "adder", "", "");
+    std::ofstream(m_workspace->defaultExerciseFile(1)) << "this is not json";
+
+    EXPECT_NO_THROW(m_service->deleteExercise(1, 1));
     EXPECT_TRUE(m_repository.load(1).exercises.empty());
 }

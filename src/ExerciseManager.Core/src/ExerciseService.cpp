@@ -13,7 +13,8 @@ namespace exercise_manager
 {
 
 ExerciseService::ExerciseService(ICourseRepository& repository, const Workspace& workspace)
-    : m_repository(repository), m_workspace(workspace), m_generator(workspace)
+    : m_repository(repository), m_workspace(workspace), m_generator(workspace),
+      m_defaults(workspace)
 {
 }
 
@@ -136,6 +137,22 @@ void ExerciseService::deleteExercise(int courseId, int exerciseNumber)
     // Data first: a leftover file is better than a listed exercise without files.
     course.exercises.erase(target);
     m_repository.save(course);
+
+    // The number of a deleted exercise is reused, so it must not stay the default.
+    // A corrupt defaults file is ignored here: the CLI asks the user to reset it.
+    std::optional<int> defaultExercise;
+    try
+    {
+        defaultExercise = m_defaults.loadDefaultExercise(courseId);
+    }
+    catch (const StorageError&)
+    {
+        defaultExercise.reset();
+    }
+    if (defaultExercise == exerciseNumber)
+    {
+        m_defaults.clearDefaultExercise(courseId);
+    }
 
     for (const std::filesystem::path& file : {headerFile, sourceFile})
     {
