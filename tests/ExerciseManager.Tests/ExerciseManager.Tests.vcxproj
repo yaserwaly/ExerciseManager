@@ -152,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CodeGeneratorTests.cpp" />
+    <ClCompile Include="ConsoleUtilsTests.cpp" />
     <ClCompile Include="CourseServiceTests.cpp" />
     <ClCompile Include="DefaultsStoreTests.cpp" />
     <ClCompile Include="ExerciseServiceTests.cpp" />
@@ -164,9 +165,15 @@
     <ClCompile Include="WorkspaceTests.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ExerciseManager.Cli\ExerciseManager.Cli.vcxproj">
+      <Project>{eb189efa-5a03-4570-97ba-aa26a4a3b165}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\..\src\ExerciseManager.Core\ExerciseManager.Core.vcxproj">
       <Project>{302660e9-30e9-4ade-85c8-3fc3a1d8845a}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="FakeConsole.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
