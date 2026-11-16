@@ -21,6 +21,9 @@
     <ClCompile Include="src\ConsoleUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\CliApp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\exercise_manager\cli\IConsole.h">
@@ -30,6 +33,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\exercise_manager\cli\ConsoleUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\exercise_manager\cli\CliApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

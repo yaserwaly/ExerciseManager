@@ -24,10 +24,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\CliApp.cpp" />
     <ClCompile Include="src\ConsoleUtils.cpp" />
     <ClCompile Include="src\StdConsole.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\exercise_manager\cli\CliApp.h" />
     <ClInclude Include="include\exercise_manager\cli\ConsoleUtils.h" />
     <ClInclude Include="include\exercise_manager\cli\IConsole.h" />
     <ClInclude Include="include\exercise_manager\cli\StdConsole.h" />
