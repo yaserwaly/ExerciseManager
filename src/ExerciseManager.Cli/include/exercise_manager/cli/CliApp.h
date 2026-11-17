@@ -72,6 +72,9 @@ class CliApp
     // The "Update course" option: asks which course, then each field with its current value.
     void updateCourse(const std::vector<Course>& courses);
 
+    // The "Set default course" option: shows the current default, then chooses or resets it.
+    void setDefaultCourse(const std::vector<Course>& courses);
+
     IConsole& m_console;
     ICourseRepository& m_repository;
     CourseService& m_courses;

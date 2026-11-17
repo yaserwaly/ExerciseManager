@@ -482,3 +482,109 @@ TEST_F(CliAppTests, ALoadingErrorAsksForEnterOnlyOnce)
 
     EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
 }
+
+// ---------- set default course ----------
+
+TEST_F(CliAppTests, SetDefaultCourseSavesTheRealCourseNumber)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_courses->addCourse("second", "c", "d");
+    m_courses->deleteCourse(1);
+    // "second" has the real number 2 but it is shown (and typed) as 1.
+    FakeConsole console{"2", "1", "1", "", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_defaults->loadDefaultCourse(), 2);
+    EXPECT_TRUE(contains(console.output(), "Default course set. Name: second\n"));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, SetDefaultCourseShowsTheCurrentDefaultAndResetRemovesIt)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_defaults->saveDefaultCourse(1);
+    FakeConsole console{"2", "2", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Default course: first\n"));
+    EXPECT_TRUE(contains(console.output(), "Default course removed.\n"));
+    EXPECT_FALSE(m_defaults->loadDefaultCourse().has_value());
+}
+
+TEST_F(CliAppTests, SetDefaultCourseShowsWhenThereIsNoDefault)
+{
+    FakeConsole console{"2", "2", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "No default course is set.\n"));
+}
+
+TEST_F(CliAppTests, SetDefaultCourseShowsWhenTheDefaultDoesNotExist)
+{
+    m_defaults->saveDefaultCourse(5);
+    FakeConsole console{"2", "2", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "The default course does not exist anymore.\n"));
+    EXPECT_FALSE(m_defaults->loadDefaultCourse().has_value());
+}
+
+TEST_F(CliAppTests, SetDefaultCourseCanFixAnUnreadableDefaultFile)
+{
+    m_courses->addCourse("first", "a", "b");
+    std::ofstream(m_workspace->defaultCourseFile(), std::ios::binary) << "this is not json";
+    FakeConsole console{"2", "1", "1", "", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "The default course file cannot be read.\n"));
+    EXPECT_EQ(m_defaults->loadDefaultCourse(), 1);
+}
+
+TEST_F(CliAppTests, SetDefaultCourseWithNoCoursesShowsAMessage)
+{
+    FakeConsole console{"2", "1", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "There are no courses.\n"));
+    EXPECT_FALSE(m_defaults->loadDefaultCourse().has_value());
+}
+
+TEST_F(CliAppTests, SetDefaultCourseAsksAgainWhenTheOptionIsNotValid)
+{
+    FakeConsole console{"2", "3", "2", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 2.\n"));
+}
+
+TEST_F(CliAppTests, ResettingTheDefaultCourseKeepsTheDefaultExerciseOfThatCourse)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "", "");
+    m_defaults->saveDefaultCourse(1);
+    m_defaults->saveDefaultExercise(1, 1);
+    FakeConsole console{"2", "2", "", "6"};
+
+    runApp(console);
+
+    EXPECT_FALSE(m_defaults->loadDefaultCourse().has_value());
+    EXPECT_EQ(m_defaults->loadDefaultExercise(1), 1);
+}
+
+TEST_F(CliAppTests, SetDefaultCourseSavesNothingWhenTheInputEndsInTheMiddle)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"2", "1"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_FALSE(m_defaults->loadDefaultCourse().has_value());
+}

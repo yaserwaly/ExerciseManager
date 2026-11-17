@@ -2,6 +2,7 @@
 
 #include "exercise_manager/cli/ConsoleUtils.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -27,6 +28,44 @@ enum class CoursesOption
 constexpr int kCoursesOptionCount = static_cast<int>(CoursesOption::Exit);
 
 constexpr const char* kLine = "========================================";
+
+// What the stored default course points to.
+enum class DefaultState
+{
+    NotSet,    // there is no default course
+    Valid,     // the default course exists
+    Missing,   // a number is stored, but that course does not exist
+    Unreadable // the defaults file is damaged
+};
+
+struct DefaultCourseCheck
+{
+    DefaultState state = DefaultState::NotSet;
+    int courseId = 0;
+};
+
+// Looks at the stored default course and checks it against the existing courses.
+DefaultCourseCheck checkDefaultCourse(const DefaultsStore& defaults,
+                                      const std::vector<Course>& courses)
+{
+    try
+    {
+        const std::optional<int> stored = defaults.loadDefaultCourse();
+        if (!stored.has_value())
+        {
+            return {DefaultState::NotSet, 0};
+        }
+
+        const bool exists =
+            std::any_of(courses.begin(), courses.end(),
+                        [&stored](const Course& course) { return course.id == *stored; });
+        return {exists ? DefaultState::Valid : DefaultState::Missing, *stored};
+    }
+    catch (const StorageError&)
+    {
+        return {DefaultState::Unreadable, 0};
+    }
+}
 
 } // namespace
 
@@ -214,6 +253,73 @@ void CliApp::updateCourse(const std::vector<Course>& courses)
         });
 }
 
+void CliApp::setDefaultCourse(const std::vector<Course>& courses)
+{
+    m_console.clearScreen();
+    m_console.writeLine(kLine);
+    m_console.writeLine("           Set default course");
+    m_console.writeLine(kLine);
+
+    const DefaultCourseCheck check = checkDefaultCourse(m_defaults, courses);
+    switch (check.state)
+    {
+    case DefaultState::NotSet:
+        m_console.writeLine("No default course is set.");
+        break;
+    case DefaultState::Valid:
+        for (const Course& course : courses)
+        {
+            if (course.id == check.courseId)
+            {
+                m_console.writeLine("Default course: " + course.name);
+            }
+        }
+        break;
+    case DefaultState::Missing:
+        m_console.writeLine("The default course does not exist anymore.");
+        break;
+    case DefaultState::Unreadable:
+        m_console.writeLine("The default course file cannot be read.");
+        break;
+    }
+
+    m_console.writeLine("[1] Choose the default course");
+    m_console.writeLine("[2] Reset (no default course)");
+    m_console.writeLine(kLine);
+
+    const std::optional<int> choice =
+        ConsoleUtils::readNumber(m_console, "Choose option [1-2]: ", 1, 2);
+    if (!choice.has_value())
+    {
+        return;
+    }
+
+    if (*choice == 2)
+    {
+        runGuarded(
+            [&]()
+            {
+                m_defaults.clearDefaultCourse();
+                m_console.writeLine("Default course removed.");
+            });
+        return;
+    }
+
+    const std::optional<std::size_t> index = pickCourse(courses);
+    if (!index.has_value())
+    {
+        return;
+    }
+    const Course& course = courses[*index];
+
+    runGuarded(
+        [&]()
+        {
+            m_defaults.saveDefaultCourse(course.id);
+            m_console.writeLine("Default course set. Name: " + course.name);
+        });
+}
+
 void CliApp::showCourses(const std::vector<Course>& courses)
 {
     m_console.writeLine(kLine);
@@ -261,6 +367,9 @@ void CliApp::runCoursesScreen()
         {
         case CoursesOption::Add:
             addCourse();
+            break;
+        case CoursesOption::SetDefault:
+            setDefaultCourse(courses);
             break;
         case CoursesOption::Update:
             updateCourse(courses);
