@@ -94,6 +94,23 @@ std::optional<std::string> ConsoleUtils::readText(IConsole& console, std::string
     return line;
 }
 
+std::optional<std::string> ConsoleUtils::readTextOrKeep(IConsole& console, std::string_view prompt,
+                                                        std::string_view current)
+{
+    console.write(std::string(prompt) + " [" + std::string(current) + "]: ");
+
+    std::string line;
+    if (!console.readLine(line))
+    {
+        return std::nullopt;
+    }
+    if (trim(line).empty())
+    {
+        return std::string(current);
+    }
+    return line;
+}
+
 bool ConsoleUtils::waitForEnter(IConsole& console)
 {
     console.write("Press Enter to continue...");

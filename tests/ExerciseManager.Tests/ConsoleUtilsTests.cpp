@@ -160,6 +160,45 @@ TEST(ConsoleUtilsTests, ReadTextReturnsNothingWhenInputEnds)
     EXPECT_FALSE(ConsoleUtils::readText(console, "Name: ").has_value());
 }
 
+// ---------- readTextOrKeep ----------
+
+TEST(ConsoleUtilsTests, ReadTextOrKeepReturnsTheTypedText)
+{
+    FakeConsole console{"new"};
+
+    EXPECT_EQ(ConsoleUtils::readTextOrKeep(console, "Name", "old"), "new");
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrKeepKeepsTheCurrentValueOnAnEmptyLine)
+{
+    FakeConsole console{""};
+
+    EXPECT_EQ(ConsoleUtils::readTextOrKeep(console, "Name", "old"), "old");
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrKeepKeepsTheCurrentValueWhenOnlySpacesAreTyped)
+{
+    FakeConsole console{"   "};
+
+    EXPECT_EQ(ConsoleUtils::readTextOrKeep(console, "Name", "old"), "old");
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrKeepShowsTheCurrentValueInThePrompt)
+{
+    FakeConsole console{""};
+
+    ConsoleUtils::readTextOrKeep(console, "Name", "old");
+
+    EXPECT_TRUE(contains(console.output(), "Name [old]: "));
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrKeepReturnsNothingWhenInputEnds)
+{
+    FakeConsole console;
+
+    EXPECT_FALSE(ConsoleUtils::readTextOrKeep(console, "Name", "old").has_value());
+}
+
 // ---------- waitForEnter ----------
 
 TEST(ConsoleUtilsTests, WaitForEnterReturnsTrueWhenALineIsRead)

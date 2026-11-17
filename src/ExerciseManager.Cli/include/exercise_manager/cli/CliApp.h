@@ -10,6 +10,9 @@
 #include "exercise_manager/Workspace.h"
 #include "exercise_manager/cli/IConsole.h"
 
+#include <cstddef>
+#include <functional>
+#include <optional>
 #include <vector>
 
 namespace exercise_manager::cli
@@ -46,8 +49,28 @@ class CliApp
     // Prints the courses, numbered 1..N for display only.
     void showCourses(const std::vector<Course>& courses);
 
-    // Shows "Error: <message>" and waits for Enter, so the user can read it.
+    // Shows "Error: <message>".
     void showError(const ExerciseManagerError& error);
+
+    // Runs one operation. If the Core throws an error, it is shown. In both cases the
+    // user must press Enter before the menu comes back.
+    void runGuarded(const std::function<void()>& action);
+
+    // The "Add course" option: asks for the data and adds the course.
+    void addCourse();
+    
+    // Asks for one of the shown courses and returns its position in the list, or no value
+    // if there are no courses or the input ended.
+    std::optional<std::size_t> pickCourse(const std::vector<Course>& courses);
+
+    // Prints the details of one course: name, descriptions and its real folder.
+    void showCourseInfo(const Course& course);
+
+    // The "Delete course" option: asks which course, asks to confirm, and deletes it.
+    void deleteCourse(const std::vector<Course>& courses);
+    
+    // The "Update course" option: asks which course, then each field with its current value.
+    void updateCourse(const std::vector<Course>& courses);
 
     IConsole& m_console;
     ICourseRepository& m_repository;

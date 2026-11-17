@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 
 #include <filesystem>
+#include <cstddef>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -67,6 +68,18 @@ class CliAppTests : public ::testing::Test
     static bool contains(const std::string& text, const std::string& part)
     {
         return text.find(part) != std::string::npos;
+    }
+
+    // Counts how many times a text appears inside another text.
+    static int countOccurrences(const std::string& text, const std::string& part)
+    {
+        int count = 0;
+        for (std::size_t position = text.find(part); position != std::string::npos;
+             position = text.find(part, position + part.size()))
+        {
+            ++count;
+        }
+        return count;
     }
 
     fs::path m_root;
@@ -182,4 +195,290 @@ TEST_F(CliAppTests, UnreadableCoursesFileEndsEvenWhenTheInputEnds)
     FakeConsole console;
 
     EXPECT_EQ(runApp(console), 1);
+}
+
+// ---------- add course ----------
+
+TEST_F(CliAppTests, AddCourseCreatesTheCourseAndWaitsForEnter)
+{
+    FakeConsole console{"3", "C++ Basics", "Basics", "Basics in full", "", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto courses = m_courses->listCourses();
+    ASSERT_EQ(courses.size(), 1u);
+    EXPECT_EQ(courses[0].name, "C++ Basics");
+    EXPECT_EQ(courses[0].description, "Basics");
+    EXPECT_EQ(courses[0].fullDescription, "Basics in full");
+    EXPECT_TRUE(contains(console.output(), "Course created successfully. Name: C++ Basics\n"));
+    EXPECT_TRUE(contains(console.output(), "Press Enter to continue..."));
+}
+
+TEST_F(CliAppTests, AddCourseShowsTheNewCourseInTheList)
+{
+    FakeConsole console{"3", "C++ Basics", "Basics", "full", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "[1] C++ Basics -- Basics\n"));
+}
+
+TEST_F(CliAppTests, AddCourseShowsTheErrorForAnInvalidName)
+{
+    FakeConsole console{"3", "bad/name", "short", "full", "", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Error: Exercise name contains a forbidden character.\n"));
+    EXPECT_TRUE(m_courses->listCourses().empty());
+}
+
+TEST_F(CliAppTests, AddCourseShowsTheErrorForADuplicateName)
+{
+    m_courses->addCourse("same", "a", "b");
+    FakeConsole console{"3", "same", "x", "y", "", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "Error: A course with this name already exists.\n"));
+    EXPECT_EQ(m_courses->listCourses().size(), 1u);
+}
+
+TEST_F(CliAppTests, AddCourseAddsNothingWhenTheInputEndsInTheMiddle)
+{
+    FakeConsole console{"3", "only a name"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(m_courses->listCourses().empty());
+}
+
+// ---------- delete course ----------
+
+TEST_F(CliAppTests, DeleteCourseWithNoCoursesShowsAMessage)
+{
+    FakeConsole console{"5", "", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "There are no courses.\n"));
+}
+
+TEST_F(CliAppTests, DeleteCourseRemovesTheCourseAndItsFolder)
+{
+    m_courses->addCourse("first", "a", "b");
+    ASSERT_TRUE(fs::exists(m_workspace->courseDir(1)));
+    FakeConsole console{"5", "1", "y", "", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(m_courses->listCourses().empty());
+    EXPECT_FALSE(fs::exists(m_workspace->courseDir(1)));
+    EXPECT_TRUE(contains(console.output(), "Course deleted successfully. Name: first\n"));
+}
+
+TEST_F(CliAppTests, DeleteCourseCancelledKeepsTheCourse)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"5", "1", "n", "", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_courses->listCourses().size(), 1u);
+    EXPECT_TRUE(contains(console.output(), "Deletion cancelled.\n"));
+}
+
+TEST_F(CliAppTests, DeleteCourseAsksAgainWhenTheNumberIsNotInTheList)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"5", "2", "1", "n", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 1.\n"));
+    EXPECT_EQ(m_courses->listCourses().size(), 1u);
+}
+
+TEST_F(CliAppTests, DeleteCourseUsesTheRealCourseNumber)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_courses->addCourse("second", "c", "d");
+    m_courses->deleteCourse(1);
+    // "second" has the real number 2 but it is shown (and typed) as 1.
+    FakeConsole console{"5", "1", "y", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(m_courses->listCourses().empty());
+    EXPECT_TRUE(contains(console.output(), "Course deleted successfully. Name: second\n"));
+}
+
+TEST_F(CliAppTests, DeleteCourseShowsTheCourseInfoBeforeAsking)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"5", "1", "n", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Name            : first\n"));
+    EXPECT_TRUE(contains(console.output(), "Description     : a\n"));
+    EXPECT_TRUE(contains(console.output(), "Full description: b\n"));
+    EXPECT_TRUE(contains(console.output(),
+                         "Folder          : " + m_workspace->courseDir(1).string() + "\n"));
+    EXPECT_TRUE(contains(console.output(), "(y/n): "));
+}
+
+TEST_F(CliAppTests, DeleteCourseDoesNothingWhenTheInputEndsAtTheQuestion)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"5", "1"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_courses->listCourses().size(), 1u);
+}
+
+// ---------- update course ----------
+
+TEST_F(CliAppTests, UpdateCourseWithNoCoursesShowsAMessage)
+{
+    FakeConsole console{"4", "", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "There are no courses.\n"));
+}
+
+TEST_F(CliAppTests, UpdateCourseChangesAllFields)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "1", "new", "new short", "new full", "", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto courses = m_courses->listCourses();
+    ASSERT_EQ(courses.size(), 1u);
+    EXPECT_EQ(courses[0].name, "new");
+    EXPECT_EQ(courses[0].description, "new short");
+    EXPECT_EQ(courses[0].fullDescription, "new full");
+    EXPECT_TRUE(contains(console.output(), "Course updated successfully. Name: new\n"));
+}
+
+TEST_F(CliAppTests, UpdateCourseKeepsEveryValueWhenEnterIsPressed)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "1", "", "", "", "", "6"};
+
+    runApp(console);
+
+    const auto courses = m_courses->listCourses();
+    ASSERT_EQ(courses.size(), 1u);
+    EXPECT_EQ(courses[0].name, "old");
+    EXPECT_EQ(courses[0].description, "old short");
+    EXPECT_EQ(courses[0].fullDescription, "old full");
+}
+
+TEST_F(CliAppTests, UpdateCourseChangesOnlyTheTypedField)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "1", "", "new short", "", "", "6"};
+
+    runApp(console);
+
+    const auto courses = m_courses->listCourses();
+    ASSERT_EQ(courses.size(), 1u);
+    EXPECT_EQ(courses[0].name, "old");
+    EXPECT_EQ(courses[0].description, "new short");
+    EXPECT_EQ(courses[0].fullDescription, "old full");
+}
+
+TEST_F(CliAppTests, UpdateCourseShowsTheCurrentValuesInThePrompts)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "1", "", "", "", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Press Enter to keep the current value.\n"));
+    EXPECT_TRUE(contains(console.output(), "Course name [old]: "));
+    EXPECT_TRUE(contains(console.output(), "Short description [old short]: "));
+    EXPECT_TRUE(contains(console.output(), "Full description [old full]: "));
+}
+
+TEST_F(CliAppTests, UpdateCourseShowsTheCourseInfoFirst)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "1", "", "", "", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Name            : old\n"));
+    EXPECT_TRUE(contains(console.output(), "Description     : old short\n"));
+    EXPECT_TRUE(contains(console.output(), "Full description: old full\n"));
+}
+
+TEST_F(CliAppTests, UpdateCourseShowsTheErrorForAnInvalidName)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "1", "bad/name", "", "", "", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Error: Exercise name contains a forbidden character.\n"));
+    EXPECT_EQ(m_courses->listCourses()[0].name, "old");
+}
+
+TEST_F(CliAppTests, UpdateCourseShowsTheErrorForTheNameOfAnotherCourse)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_courses->addCourse("second", "c", "d");
+    FakeConsole console{"4", "2", "first", "", "", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Error: Another course already uses this name.\n"));
+    EXPECT_EQ(m_courses->listCourses()[1].name, "second");
+}
+
+TEST_F(CliAppTests, UpdateCourseChangesNothingWhenTheInputEndsInTheMiddle)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "1", "new name"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_courses->listCourses()[0].name, "old");
+}
+
+// ---------- Enter is asked once per operation ----------
+
+TEST_F(CliAppTests, AnErrorInAnOperationAsksForEnterOnlyOnce)
+{
+    FakeConsole console{"3", "bad/name", "short", "full", "", "6"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, ASuccessfulOperationAsksForEnterOnlyOnce)
+{
+    FakeConsole console{"3", "C++ Basics", "short", "full", "", "6"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, ALoadingErrorAsksForEnterOnlyOnce)
+{
+    std::ofstream(m_workspace->coursesFile(), std::ios::binary) << "this is not json";
+    FakeConsole console{""};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
 }

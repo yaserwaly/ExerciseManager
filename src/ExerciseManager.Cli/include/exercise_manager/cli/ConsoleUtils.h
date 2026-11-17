@@ -37,6 +37,18 @@ class ConsoleUtils
     /// @return The line, or no value if the input ended.
     static std::optional<std::string> readText(IConsole& console, std::string_view prompt);
 
+    /// @brief Reads a line of text, and keeps the current value if nothing is typed.
+    ///
+    /// The prompt is shown with the current value in brackets, e.g. `Name [old]: `.
+    /// An empty line (or a line with only spaces) keeps the current value.
+    /// @param console The console to use.
+    /// @param prompt The text shown before the current value.
+    /// @param current The current value.
+    /// @return The new text, the current value if nothing was typed, or no value if the
+    ///         input ended.
+    static std::optional<std::string> readTextOrKeep(IConsole& console, std::string_view prompt,
+                                                     std::string_view current);
+
     /// @brief Shows "Press Enter to continue..." and waits for Enter.
     /// @param console The console to use.
     /// @return false if the input ended, otherwise true.
