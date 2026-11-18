@@ -588,3 +588,132 @@ TEST_F(CliAppTests, SetDefaultCourseSavesNothingWhenTheInputEndsInTheMiddle)
 
     EXPECT_FALSE(m_defaults->loadDefaultCourse().has_value());
 }
+
+// ---------- course screen ----------
+
+TEST_F(CliAppTests, OpenCourseShowsTheCourseInfoAndItsExercises)
+{
+    m_courses->addCourse("C++ Basics", "Basics", "Basics in full");
+    m_exercises->addExercise(1, "adder", "Adds", "Adds numbers");
+    m_exercises->addExercise(1, "sum", "Sums", "Sums numbers");
+    FakeConsole console{"1", "1", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "Name            : C++ Basics\n"));
+    EXPECT_TRUE(contains(console.output(), "Description     : Basics\n"));
+    EXPECT_TRUE(contains(console.output(), "Full description: Basics in full\n"));
+    EXPECT_TRUE(contains(console.output(),
+                         "Folder          : " + m_workspace->courseDir(1).string() + "\n"));
+    EXPECT_TRUE(contains(console.output(), "[1] adder -- Adds\n"));
+    EXPECT_TRUE(contains(console.output(), "[2] sum -- Sums\n"));
+}
+
+TEST_F(CliAppTests, ExercisesAreNumberedFromOneToNAndNeverShowTheRealNumbers)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x"); // real number 1
+    m_exercises->addExercise(1, "b", "bd", "x"); // real number 2
+    m_exercises->addExercise(1, "c", "cd", "x"); // real number 3
+    m_exercises->addExercise(1, "d", "dd", "x"); // real number 4
+    m_exercises->deleteExercise(1, 1);
+    m_exercises->deleteExercise(1, 3);
+    m_exercises->addExercise(1, "e", "ed", "x"); // takes the free number 1, stored last
+    FakeConsole console{"1", "1", "6", "6"};
+
+    runApp(console);
+
+    // Real numbers: e = 1, b = 2, d = 4. Shown as 1, 2, 3.
+    EXPECT_TRUE(contains(console.output(), "[1] e -- ed\n[2] b -- bd\n[3] d -- dd\n"));
+    EXPECT_FALSE(contains(console.output(), "[4] d"));
+}
+
+TEST_F(CliAppTests, CourseScreenShowsTheMenuOptions)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "[1] Open exercise\n"));
+    EXPECT_TRUE(contains(console.output(), "[2] Set default exercise\n"));
+    EXPECT_TRUE(contains(console.output(), "[3] Add exercise\n"));
+    EXPECT_TRUE(contains(console.output(), "[4] Update exercise\n"));
+    EXPECT_TRUE(contains(console.output(), "[5] Delete exercise\n"));
+    EXPECT_TRUE(contains(console.output(), "[6] Back to courses\n"));
+    EXPECT_TRUE(contains(console.output(), "[7] Exit\n"));
+}
+
+TEST_F(CliAppTests, CourseScreenShowsAMessageWhenThereAreNoExercises)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "No exercises yet.\n"));
+}
+
+TEST_F(CliAppTests, BackReturnsToTheCoursesScreen)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    // The courses screen is shown before opening the course and again after going back.
+    EXPECT_EQ(countOccurrences(console.output(), "[1] Open course\n"), 2);
+}
+
+TEST_F(CliAppTests, ExitFromTheCourseScreenEndsTheProgram)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(countOccurrences(console.output(), "[1] Open course\n"), 1);
+}
+
+TEST_F(CliAppTests, OpenCourseWithNoCoursesShowsAMessage)
+{
+    FakeConsole console{"1", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "There are no courses.\n"));
+    EXPECT_FALSE(contains(console.output(), "Exercises:"));
+}
+
+TEST_F(CliAppTests, OpenCourseAsksAgainWhenTheNumberIsNotInTheList)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "2", "1", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 1.\n"));
+    EXPECT_TRUE(contains(console.output(), "Exercises:"));
+}
+
+TEST_F(CliAppTests, CourseScreenEndsTheProgramWhenTheInputEnds)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "Exercises:"));
+}
+
+TEST_F(CliAppTests, CourseScreenAsksAgainWhenTheOptionIsNotValid)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "9", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 7.\n"));
+}

@@ -43,6 +43,13 @@ class CliApp
     int run();
 
   private:
+    // How the course screen ends: back to the courses screen, or leave the program.
+    enum class CourseScreenResult
+    {
+        BackToCourses,
+        Exit
+    };
+
     // The courses screen: the list of courses and its menu. Returns when the user exits.
     void runCoursesScreen();
 
@@ -74,6 +81,13 @@ class CliApp
 
     // The "Set default course" option: shows the current default, then chooses or resets it.
     void setDefaultCourse(const std::vector<Course>& courses);
+
+    // The course screen: course info, its exercises and their menu. Returns when the user
+    // goes back to the courses screen or exits.
+    CourseScreenResult runCourseScreen(int courseId);
+
+    // Prints the exercises of a course, numbered 1..N for display only.
+    void showExercises(const Course& course);
 
     IConsole& m_console;
     ICourseRepository& m_repository;

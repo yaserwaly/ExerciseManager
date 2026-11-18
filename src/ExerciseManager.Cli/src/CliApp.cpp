@@ -27,6 +27,20 @@ enum class CoursesOption
 
 constexpr int kCoursesOptionCount = static_cast<int>(CoursesOption::Exit);
 
+// The options of the course screen (the exercises menu). The numbers are what the user types.
+enum class ExercisesOption
+{
+    Open = 1,
+    SetDefault = 2,
+    Add = 3,
+    Update = 4,
+    Delete = 5,
+    BackToCourses = 6,
+    Exit = 7
+};
+
+constexpr int kExercisesOptionCount = static_cast<int>(ExercisesOption::Exit);
+
 constexpr const char* kLine = "========================================";
 
 // What the stored default course points to.
@@ -320,6 +334,79 @@ void CliApp::setDefaultCourse(const std::vector<Course>& courses)
         });
 }
 
+void CliApp::showExercises(const Course& course)
+{
+    m_console.writeLine("Exercises:");
+
+    if (course.exercises.empty())
+    {
+        m_console.writeLine("No exercises yet.");
+    }
+    // The numbers shown are positions in the list (1..N), not the real exercise numbers.
+    for (std::size_t i = 0; i < course.exercises.size(); ++i)
+    {
+        m_console.writeLine("[" + std::to_string(i + 1) + "] " + course.exercises[i].name + " -- " +
+                            course.exercises[i].description);
+    }
+
+    m_console.writeLine(kLine);
+}
+
+CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
+{
+    while (true)
+    {
+        // The course is loaded again every time, so changes are always shown.
+        Course course;
+        try
+        {
+            course = m_repository.load(courseId);
+        }
+        catch (const ExerciseManagerError& error)
+        {
+            showError(error);
+            ConsoleUtils::waitForEnter(m_console);
+            return CourseScreenResult::BackToCourses;
+        }
+        // The list is ordered by the real exercise number, but it is shown as 1..N.
+        std::sort(course.exercises.begin(), course.exercises.end(),
+                  [](const Exercise& a, const Exercise& b) { return a.number < b.number; });
+
+        m_console.clearScreen();
+        m_console.writeLine(kLine);
+        m_console.writeLine("                Course");
+        m_console.writeLine(kLine);
+        showCourseInfo(course);
+        showExercises(course);
+        m_console.writeLine("[1] Open exercise");
+        m_console.writeLine("[2] Set default exercise");
+        m_console.writeLine("[3] Add exercise");
+        m_console.writeLine("[4] Update exercise");
+        m_console.writeLine("[5] Delete exercise");
+        m_console.writeLine("[6] Back to courses");
+        m_console.writeLine("[7] Exit");
+        m_console.writeLine(kLine);
+
+        const std::optional<int> choice = ConsoleUtils::readNumber(
+            m_console, "Choose option [1-" + std::to_string(kExercisesOptionCount) + "]: ", 1,
+            kExercisesOptionCount);
+        if (!choice.has_value())
+        {
+            return CourseScreenResult::Exit; // the input ended
+        }
+
+        switch (static_cast<ExercisesOption>(*choice))
+        {
+        case ExercisesOption::BackToCourses:
+            return CourseScreenResult::BackToCourses;
+        case ExercisesOption::Exit:
+            return CourseScreenResult::Exit;
+        default:
+            break; // the other options are added in the next steps
+        }
+    }
+}
+
 void CliApp::showCourses(const std::vector<Course>& courses)
 {
     m_console.writeLine(kLine);
@@ -368,6 +455,16 @@ void CliApp::runCoursesScreen()
         case CoursesOption::Add:
             addCourse();
             break;
+        case CoursesOption::Open:
+        {
+            const std::optional<std::size_t> index = pickCourse(courses);
+            if (index.has_value() &&
+                runCourseScreen(courses[*index].id) == CourseScreenResult::Exit)
+            {
+                return;
+            }
+            break;
+        }
         case CoursesOption::SetDefault:
             setDefaultCourse(courses);
             break;
