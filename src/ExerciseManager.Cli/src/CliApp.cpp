@@ -352,6 +352,40 @@ void CliApp::showExercises(const Course& course)
     m_console.writeLine(kLine);
 }
 
+void CliApp::addExercise(int courseId)
+{
+    m_console.clearScreen();
+    m_console.writeLine(kLine);
+    m_console.writeLine("              Add exercise");
+    m_console.writeLine(kLine);
+
+    // If the input ends in the middle, nothing is added.
+    const std::optional<std::string> name = ConsoleUtils::readText(m_console, "Exercise name: ");
+    if (!name.has_value())
+    {
+        return;
+    }
+    const std::optional<std::string> description =
+        ConsoleUtils::readText(m_console, "Short description: ");
+    if (!description.has_value())
+    {
+        return;
+    }
+    const std::optional<std::string> fullDescription =
+        ConsoleUtils::readText(m_console, "Full description: ");
+    if (!fullDescription.has_value())
+    {
+        return;
+    }
+
+    runGuarded(
+        [&]()
+        {
+            m_exercises.addExercise(courseId, *name, *description, *fullDescription);
+            m_console.writeLine("Exercise created successfully. Name: " + *name);
+        });
+}
+
 CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
 {
     while (true)
@@ -397,6 +431,9 @@ CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
 
         switch (static_cast<ExercisesOption>(*choice))
         {
+        case ExercisesOption::Add:
+            addExercise(courseId);
+            break;
         case ExercisesOption::BackToCourses:
             return CourseScreenResult::BackToCourses;
         case ExercisesOption::Exit:

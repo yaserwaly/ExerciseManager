@@ -5,6 +5,7 @@
 #include "exercise_manager/CourseService.h"
 #include "exercise_manager/DefaultsStore.h"
 #include "exercise_manager/ExerciseService.h"
+#include "exercise_manager/FileNaming.h"
 #include "exercise_manager/JsonCourseRepository.h"
 #include "exercise_manager/Workspace.h"
 
@@ -21,6 +22,7 @@ namespace fs = std::filesystem;
 using exercise_manager::CourseService;
 using exercise_manager::DefaultsStore;
 using exercise_manager::ExerciseService;
+using exercise_manager::FileNaming;
 using exercise_manager::JsonCourseRepository;
 using exercise_manager::Workspace;
 using exercise_manager::cli::CliApp;
@@ -716,4 +718,97 @@ TEST_F(CliAppTests, CourseScreenAsksAgainWhenTheOptionIsNotValid)
 
     EXPECT_TRUE(
         contains(console.output(), "Invalid input. Please enter a number between 1 and 7.\n"));
+}
+
+// ---------- add exercise ----------
+
+TEST_F(CliAppTests, AddExerciseCreatesTheExerciseAndItsFiles)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "3", "adder", "Adds", "Adds numbers", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 1u);
+    EXPECT_EQ(exercises[0].number, 1);
+    EXPECT_EQ(exercises[0].name, "adder");
+    EXPECT_EQ(exercises[0].description, "Adds");
+    EXPECT_EQ(exercises[0].fullDescription, "Adds numbers");
+    EXPECT_TRUE(fs::is_regular_file(m_workspace->courseDir(1) / FileNaming::headerFileName(1, 1)));
+    EXPECT_TRUE(fs::is_regular_file(m_workspace->courseDir(1) / FileNaming::sourceFileName(1, 1)));
+    EXPECT_TRUE(contains(console.output(), "Exercise created successfully. Name: adder\n"));
+    // The course screen shows the new exercise right away.
+    EXPECT_TRUE(contains(console.output(), "[1] adder -- Adds\n"));
+}
+
+TEST_F(CliAppTests, AddExerciseTakesTheFirstFreeRealNumber)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x"); // real number 1
+    m_exercises->addExercise(1, "b", "bd", "x"); // real number 2
+    m_exercises->addExercise(1, "c", "cd", "x"); // real number 3
+    m_exercises->deleteExercise(1, 2);
+    FakeConsole console{"1", "1", "3", "d", "dd", "x", "", "6", "6"};
+
+    runApp(console);
+
+    // The free real number 2 is reused. The list shows 1, 2, 3 for numbers 1, 2, 3.
+    for (const auto& exercise : m_repository->load(1).exercises)
+    {
+        if (exercise.name == "d")
+        {
+            EXPECT_EQ(exercise.number, 2);
+        }
+    }
+    EXPECT_EQ(m_repository->load(1).exercises.size(), 3u);
+}
+
+TEST_F(CliAppTests, AddExerciseAddsItToTheOpenedCourseOnly)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_courses->addCourse("second", "c", "d");
+    // The second course is shown (and typed) as 2.
+    FakeConsole console{"1", "2", "3", "adder", "Adds", "full", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(m_repository->load(1).exercises.empty());
+    ASSERT_EQ(m_repository->load(2).exercises.size(), 1u);
+    EXPECT_EQ(m_repository->load(2).exercises[0].name, "adder");
+}
+
+TEST_F(CliAppTests, AddExerciseShowsTheErrorForAnInvalidName)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "3", "bad/name", "short", "full", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Error: Exercise name contains a forbidden character.\n"));
+    EXPECT_TRUE(m_repository->load(1).exercises.empty());
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, AddExerciseShowsTheErrorForADuplicateName)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "same", "a", "b");
+    FakeConsole console{"1", "1", "3", "same", "x", "y", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "Error: An exercise with this name already exists.\n"));
+    EXPECT_EQ(m_repository->load(1).exercises.size(), 1u);
+}
+
+TEST_F(CliAppTests, AddExerciseAddsNothingWhenTheInputEndsInTheMiddle)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "3", "only a name"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(m_repository->load(1).exercises.empty());
 }

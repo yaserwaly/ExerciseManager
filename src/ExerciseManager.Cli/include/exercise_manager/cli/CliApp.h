@@ -89,6 +89,9 @@ class CliApp
     // Prints the exercises of a course, numbered 1..N for display only.
     void showExercises(const Course& course);
 
+    // The "Add exercise" option: asks for the data and adds the exercise to the course.
+    void addExercise(int courseId);
+
     IConsole& m_console;
     ICourseRepository& m_repository;
     CourseService& m_courses;
