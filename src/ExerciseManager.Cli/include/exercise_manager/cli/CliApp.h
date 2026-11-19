@@ -105,6 +105,10 @@ class CliApp
     // The "Update exercise" option: asks which exercise, then each field with its current value.
     void updateExercise(const Course& course);
 
+    // The "Open exercise" option: asks which exercise, shows its details and, if the user
+    // agrees, builds and runs it.
+    void openExercise(const Course& course);
+
     IConsole& m_console;
     ICourseRepository& m_repository;
     CourseService& m_courses;

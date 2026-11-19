@@ -503,6 +503,40 @@ void CliApp::updateExercise(const Course& course)
         });
 }
 
+void CliApp::openExercise(const Course& course)
+{
+    const std::optional<std::size_t> index = pickExercise(course);
+    if (!index.has_value())
+    {
+        return;
+    }
+    const Exercise& exercise = course.exercises[*index];
+
+    m_console.clearScreen();
+    m_console.writeLine(kLine);
+    m_console.writeLine("                Exercise");
+    m_console.writeLine(kLine);
+    showExerciseInfo(course.id, exercise);
+
+    const std::optional<bool> run = ConsoleUtils::askYesNo(m_console, "Run the exercise?");
+    if (!run.has_value() || !*run)
+    {
+        return; // back to the exercises list
+    }
+
+    m_console.clearScreen();
+    m_console.writeLine("Building the exercise...");
+    runGuarded(
+        [&]()
+        {
+            // The real exercise number is used here, not the position in the list.
+            const BuildResult result = m_runner.buildAndRun(course.id, exercise.number);
+            m_console.writeLine("");
+            m_console.writeLine("Exercise finished with exit code " +
+                                std::to_string(result.exitCode) + ".");
+        });
+}
+
 CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
 {
     while (true)
@@ -548,6 +582,9 @@ CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
 
         switch (static_cast<ExercisesOption>(*choice))
         {
+        case ExercisesOption::Open:
+            openExercise(course);
+            break;
         case ExercisesOption::Add:
             addExercise(courseId);
             break;

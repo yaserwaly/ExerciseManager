@@ -1088,3 +1088,127 @@ TEST_F(CliAppTests, UpdateExerciseChangesNothingWhenTheInputEndsInTheMiddle)
 
     EXPECT_EQ(m_repository->load(1).exercises[0].name, "old");
 }
+
+// ---------- open exercise ----------
+
+TEST_F(CliAppTests, OpenExerciseWithNoExercisesShowsAMessage)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "1", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "There are no exercises.\n"));
+    EXPECT_TRUE(m_runner.calls.empty());
+}
+
+TEST_F(CliAppTests, OpenExerciseShowsTheInfoAndDoesNotRunWhenTheAnswerIsNo)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "Adds numbers");
+    FakeConsole console{"1", "1", "1", "1", "n", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "Name            : adder\n"));
+    EXPECT_TRUE(contains(console.output(), "Class           : ClsC01Exercise001\n"));
+    EXPECT_TRUE(contains(console.output(), "Run the exercise? (y/n): "));
+    EXPECT_TRUE(m_runner.calls.empty());
+    // Answering no goes straight back to the exercises list, with no Enter to press.
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, OpenExerciseRunsTheExerciseWithItsRealNumber)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x"); // real number 1
+    m_exercises->addExercise(1, "b", "bd", "x"); // real number 2
+    m_exercises->addExercise(1, "c", "cd", "x"); // real number 3
+    m_exercises->addExercise(1, "d", "dd", "x"); // real number 4
+    m_exercises->deleteExercise(1, 1);
+    m_exercises->deleteExercise(1, 3);
+    // The list shows b as 1 and d as 2. Typing 2 runs d, whose real number is 4.
+    FakeConsole console{"1", "1", "1", "2", "y", "", "6", "6"};
+
+    runApp(console);
+
+    ASSERT_EQ(m_runner.calls.size(), 1u);
+    EXPECT_EQ(m_runner.calls[0].first, 1);
+    EXPECT_EQ(m_runner.calls[0].second, 4);
+}
+
+TEST_F(CliAppTests, OpenExerciseShowsTheExitCodeAndAsksForEnterOnce)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    m_runner.exitCode = 3;
+    FakeConsole console{"1", "1", "1", "1", "y", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Building the exercise...\n"));
+    EXPECT_TRUE(contains(console.output(), "Exercise finished with exit code 3.\n"));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, OpenExerciseShowsTheBuildErrorAndGoesBackToTheList)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    m_runner.errorMessage = "Build failed:\nerror C2065: x";
+    FakeConsole console{"1", "1", "1", "1", "y", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "Error: Build failed:\nerror C2065: x\n"));
+    EXPECT_FALSE(contains(console.output(), "Exercise finished"));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, AfterRunningTheExercisesListIsShownAgainAndTheExerciseIsNotReopened)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "1", "1", "y", "", "6", "6"};
+
+    runApp(console);
+
+    // The list is shown before and after running. The exercise details are shown only once.
+    EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 2);
+    EXPECT_EQ(countOccurrences(console.output(), "Class           : "), 1);
+}
+
+TEST_F(CliAppTests, OpenExerciseAsksAgainWhenTheNumberIsNotInTheList)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "1", "2", "1", "n", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 1.\n"));
+}
+
+TEST_F(CliAppTests, OpenExerciseAsksAgainWhenTheAnswerIsNotYesOrNo)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "1", "1", "maybe", "n", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Invalid input. Please enter 'y' or 'n'.\n"));
+    EXPECT_TRUE(m_runner.calls.empty());
+}
+
+TEST_F(CliAppTests, OpenExerciseRunsNothingWhenTheInputEndsAtTheQuestion)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "1", "1"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(m_runner.calls.empty());
+}
