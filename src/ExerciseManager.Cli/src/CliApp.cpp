@@ -457,6 +457,52 @@ void CliApp::deleteExercise(const Course& course)
         });
 }
 
+void CliApp::updateExercise(const Course& course)
+{
+    const std::optional<std::size_t> index = pickExercise(course);
+    if (!index.has_value())
+    {
+        return;
+    }
+    const Exercise& exercise = course.exercises[*index];
+
+    m_console.clearScreen();
+    m_console.writeLine(kLine);
+    m_console.writeLine("             Update exercise");
+    m_console.writeLine(kLine);
+    showExerciseInfo(course.id, exercise);
+    m_console.writeLine("Press Enter to keep the current value.");
+
+    // If the input ends in the middle, nothing is changed.
+    const std::optional<std::string> name =
+        ConsoleUtils::readTextOrKeep(m_console, "Exercise name", exercise.name);
+    if (!name.has_value())
+    {
+        return;
+    }
+    const std::optional<std::string> description =
+        ConsoleUtils::readTextOrKeep(m_console, "Short description", exercise.description);
+    if (!description.has_value())
+    {
+        return;
+    }
+    const std::optional<std::string> fullDescription =
+        ConsoleUtils::readTextOrKeep(m_console, "Full description", exercise.fullDescription);
+    if (!fullDescription.has_value())
+    {
+        return;
+    }
+
+    runGuarded(
+        [&]()
+        {
+            // The real exercise number is used here, not the position in the list.
+            m_exercises.updateExercise(course.id, exercise.number, *name, *description,
+                                       *fullDescription);
+            m_console.writeLine("Exercise updated successfully. Name: " + *name);
+        });
+}
+
 CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
 {
     while (true)
@@ -504,6 +550,9 @@ CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
         {
         case ExercisesOption::Add:
             addExercise(courseId);
+            break;
+        case ExercisesOption::Update:
+            updateExercise(course);
             break;
         case ExercisesOption::Delete:
             deleteExercise(course);

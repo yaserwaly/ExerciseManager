@@ -935,3 +935,156 @@ TEST_F(CliAppTests, DeleteExerciseDoesNothingWhenTheInputEndsAtTheQuestion)
 
     EXPECT_EQ(m_repository->load(1).exercises.size(), 1u);
 }
+
+// ---------- update exercise ----------
+
+TEST_F(CliAppTests, UpdateExerciseWithNoExercisesShowsAMessage)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "4", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "There are no exercises.\n"));
+}
+
+TEST_F(CliAppTests, UpdateExerciseChangesAllFields)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "1", "new", "new short", "new full", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 1u);
+    EXPECT_EQ(exercises[0].number, 1);
+    EXPECT_EQ(exercises[0].name, "new");
+    EXPECT_EQ(exercises[0].description, "new short");
+    EXPECT_EQ(exercises[0].fullDescription, "new full");
+    EXPECT_TRUE(contains(console.output(), "Exercise updated successfully. Name: new\n"));
+}
+
+TEST_F(CliAppTests, UpdateExerciseKeepsEveryValueWhenEnterIsPressed)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "1", "", "", "", "", "6", "6"};
+
+    runApp(console);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 1u);
+    EXPECT_EQ(exercises[0].name, "old");
+    EXPECT_EQ(exercises[0].description, "old short");
+    EXPECT_EQ(exercises[0].fullDescription, "old full");
+}
+
+TEST_F(CliAppTests, UpdateExerciseChangesOnlyTheTypedField)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "1", "", "new short", "", "", "6", "6"};
+
+    runApp(console);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 1u);
+    EXPECT_EQ(exercises[0].name, "old");
+    EXPECT_EQ(exercises[0].description, "new short");
+    EXPECT_EQ(exercises[0].fullDescription, "old full");
+}
+
+TEST_F(CliAppTests, UpdateExerciseUsesTheRealExerciseNumberNotThePosition)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x"); // real number 1
+    m_exercises->addExercise(1, "b", "bd", "x"); // real number 2
+    m_exercises->addExercise(1, "c", "cd", "x"); // real number 3
+    m_exercises->addExercise(1, "d", "dd", "x"); // real number 4
+    m_exercises->deleteExercise(1, 1);
+    m_exercises->deleteExercise(1, 3);
+    // The list shows b as 1 and d as 2. Typing 2 updates d, whose real number is 4.
+    FakeConsole console{"1", "1", "4", "2", "renamed", "", "", "", "6", "6"};
+
+    runApp(console);
+
+    std::string nameOfNumber2;
+    std::string nameOfNumber4;
+    for (const auto& exercise : m_repository->load(1).exercises)
+    {
+        if (exercise.number == 2)
+        {
+            nameOfNumber2 = exercise.name;
+        }
+        if (exercise.number == 4)
+        {
+            nameOfNumber4 = exercise.name;
+        }
+    }
+    EXPECT_EQ(nameOfNumber2, "b");
+    EXPECT_EQ(nameOfNumber4, "renamed");
+}
+
+TEST_F(CliAppTests, UpdateExerciseShowsTheCurrentValuesInThePrompts)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "1", "", "", "", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Press Enter to keep the current value.\n"));
+    EXPECT_TRUE(contains(console.output(), "Exercise name [old]: "));
+    EXPECT_TRUE(contains(console.output(), "Short description [old short]: "));
+    EXPECT_TRUE(contains(console.output(), "Full description [old full]: "));
+}
+
+TEST_F(CliAppTests, UpdateExerciseShowsTheExerciseInfoFirst)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "1", "", "", "", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Name            : old\n"));
+    EXPECT_TRUE(contains(console.output(), "Class           : ClsC01Exercise001\n"));
+}
+
+TEST_F(CliAppTests, UpdateExerciseShowsTheErrorForAnInvalidName)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "1", "bad/name", "", "", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Error: Exercise name contains a forbidden character.\n"));
+    EXPECT_EQ(m_repository->load(1).exercises[0].name, "old");
+}
+
+TEST_F(CliAppTests, UpdateExerciseShowsTheErrorForTheNameOfAnotherExercise)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");
+    m_exercises->addExercise(1, "b", "bd", "x");
+    FakeConsole console{"1", "1", "4", "2", "a", "", "", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Error: Another exercise already uses this name.\n"));
+    EXPECT_EQ(m_repository->load(1).exercises[1].name, "b");
+}
+
+TEST_F(CliAppTests, UpdateExerciseChangesNothingWhenTheInputEndsInTheMiddle)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "1", "new name"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_repository->load(1).exercises[0].name, "old");
+}

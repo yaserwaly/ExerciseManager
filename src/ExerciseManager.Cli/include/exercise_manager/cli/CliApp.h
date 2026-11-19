@@ -102,6 +102,9 @@ class CliApp
     // The "Delete exercise" option: asks which exercise, asks to confirm, and deletes it.
     void deleteExercise(const Course& course);
 
+    // The "Update exercise" option: asks which exercise, then each field with its current value.
+    void updateExercise(const Course& course);
+
     IConsole& m_console;
     ICourseRepository& m_repository;
     CourseService& m_courses;
