@@ -812,3 +812,126 @@ TEST_F(CliAppTests, AddExerciseAddsNothingWhenTheInputEndsInTheMiddle)
 
     EXPECT_TRUE(m_repository->load(1).exercises.empty());
 }
+
+// ---------- delete exercise ----------
+
+TEST_F(CliAppTests, DeleteExerciseWithNoExercisesShowsAMessage)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "5", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "There are no exercises.\n"));
+}
+
+TEST_F(CliAppTests, DeleteExerciseRemovesTheExerciseAndItsFiles)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "5", "1", "y", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(m_repository->load(1).exercises.empty());
+    EXPECT_FALSE(fs::exists(m_workspace->courseDir(1) / FileNaming::headerFileName(1, 1)));
+    EXPECT_FALSE(fs::exists(m_workspace->courseDir(1) / FileNaming::sourceFileName(1, 1)));
+    EXPECT_TRUE(contains(console.output(), "Exercise deleted successfully. Name: adder\n"));
+}
+
+TEST_F(CliAppTests, DeleteExerciseUsesTheRealExerciseNumberNotThePosition)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x"); // real number 1
+    m_exercises->addExercise(1, "b", "bd", "x"); // real number 2
+    m_exercises->addExercise(1, "c", "cd", "x"); // real number 3
+    m_exercises->addExercise(1, "d", "dd", "x"); // real number 4
+    m_exercises->deleteExercise(1, 1);
+    m_exercises->deleteExercise(1, 3);
+    // The list shows b as 1 and d as 2. Typing 2 deletes d, whose real number is 4.
+    FakeConsole console{"1", "1", "5", "2", "y", "", "6", "6"};
+
+    runApp(console);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 1u);
+    EXPECT_EQ(exercises[0].name, "b");
+    EXPECT_EQ(exercises[0].number, 2);
+    EXPECT_TRUE(fs::exists(m_workspace->courseDir(1) / FileNaming::headerFileName(1, 2)));
+    EXPECT_FALSE(fs::exists(m_workspace->courseDir(1) / FileNaming::headerFileName(1, 4)));
+    EXPECT_TRUE(contains(console.output(), "Exercise deleted successfully. Name: d\n"));
+}
+
+TEST_F(CliAppTests, DeleteExerciseCancelledKeepsTheExerciseAndItsFiles)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "5", "1", "n", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_repository->load(1).exercises.size(), 1u);
+    EXPECT_TRUE(fs::exists(m_workspace->courseDir(1) / FileNaming::headerFileName(1, 1)));
+    EXPECT_TRUE(contains(console.output(), "Deletion cancelled.\n"));
+}
+
+TEST_F(CliAppTests, DeleteExerciseAsksAgainWhenTheNumberIsNotInTheList)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "5", "2", "1", "n", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 1.\n"));
+    EXPECT_EQ(m_repository->load(1).exercises.size(), 1u);
+}
+
+TEST_F(CliAppTests, DeleteExerciseShowsTheRealClassNameAndFilePathsBeforeAsking)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");              // real number 1
+    m_exercises->addExercise(1, "b", "Adds", "Adds numbers"); // real number 2
+    m_exercises->deleteExercise(1, 1);
+    // b is shown as 1, but its real number is 2.
+    FakeConsole console{"1", "1", "5", "1", "n", "", "6", "6"};
+
+    runApp(console);
+
+    const fs::path courseDir = m_workspace->courseDir(1);
+    EXPECT_TRUE(contains(console.output(), "Name            : b\n"));
+    EXPECT_TRUE(contains(console.output(), "Description     : Adds\n"));
+    EXPECT_TRUE(contains(console.output(), "Full description: Adds numbers\n"));
+    EXPECT_TRUE(contains(console.output(), "Class           : ClsC01Exercise002\n"));
+    EXPECT_TRUE(contains(
+        console.output(),
+        "Header          : " + (courseDir / FileNaming::headerFileName(1, 2)).string() + "\n"));
+    EXPECT_TRUE(contains(
+        console.output(),
+        "Source          : " + (courseDir / FileNaming::sourceFileName(1, 2)).string() + "\n"));
+    EXPECT_TRUE(contains(console.output(), "(y/n): "));
+}
+
+TEST_F(CliAppTests, DeleteExerciseClearsItsDefaultExercise)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    m_defaults->saveDefaultExercise(1, 1);
+    FakeConsole console{"1", "1", "5", "1", "y", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_FALSE(m_defaults->loadDefaultExercise(1).has_value());
+}
+
+TEST_F(CliAppTests, DeleteExerciseDoesNothingWhenTheInputEndsAtTheQuestion)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "5", "1"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_repository->load(1).exercises.size(), 1u);
+}

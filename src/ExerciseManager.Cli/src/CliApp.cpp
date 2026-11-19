@@ -1,11 +1,12 @@
 #include "exercise_manager/cli/CliApp.h"
-
+#include "exercise_manager/FileNaming.h"
 #include "exercise_manager/cli/ConsoleUtils.h"
 
 #include <algorithm>
 #include <cstddef>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace exercise_manager::cli
@@ -79,6 +80,28 @@ DefaultCourseCheck checkDefaultCourse(const DefaultsStore& defaults,
     {
         return {DefaultState::Unreadable, 0};
     }
+}
+
+// Asks for a position in a list that is shown numbered 1..N. The number typed is only the
+// position in the list, never the real course or exercise number.
+// Returns the position as a 0-based index, or no value if the list is empty or the input ended.
+std::optional<std::size_t> pickPosition(IConsole& console, std::size_t count,
+                                        std::string_view emptyMessage, std::string_view prompt)
+{
+    if (count == 0)
+    {
+        console.writeLine(emptyMessage);
+        ConsoleUtils::waitForEnter(console);
+        return std::nullopt;
+    }
+
+    const std::optional<int> number =
+        ConsoleUtils::readNumber(console, prompt, 1, static_cast<int>(count));
+    if (!number.has_value())
+    {
+        return std::nullopt;
+    }
+    return static_cast<std::size_t>(*number - 1);
 }
 
 } // namespace
@@ -162,20 +185,8 @@ void CliApp::addCourse()
 
 std::optional<std::size_t> CliApp::pickCourse(const std::vector<Course>& courses)
 {
-    if (courses.empty())
-    {
-        m_console.writeLine("There are no courses.");
-        ConsoleUtils::waitForEnter(m_console);
-        return std::nullopt;
-    }
-
-    const std::optional<int> number = ConsoleUtils::readNumber(
-        m_console, "Enter course number: ", 1, static_cast<int>(courses.size()));
-    if (!number.has_value())
-    {
-        return std::nullopt;
-    }
-    return static_cast<std::size_t>(*number - 1);
+    return pickPosition(m_console, courses.size(), "There are no courses.",
+                        "Enter course number: ");
 }
 
 void CliApp::showCourseInfo(const Course& course)
@@ -386,6 +397,66 @@ void CliApp::addExercise(int courseId)
         });
 }
 
+std::optional<std::size_t> CliApp::pickExercise(const Course& course)
+{
+    return pickPosition(m_console, course.exercises.size(), "There are no exercises.",
+                        "Enter exercise number: ");
+}
+
+void CliApp::showExerciseInfo(int courseId, const Exercise& exercise)
+{
+    const std::filesystem::path courseDir = m_workspace.courseDir(courseId);
+    const std::filesystem::path header =
+        courseDir / FileNaming::headerFileName(courseId, exercise.number);
+    const std::filesystem::path source =
+        courseDir / FileNaming::sourceFileName(courseId, exercise.number);
+
+    m_console.writeLine("Name            : " + exercise.name);
+    m_console.writeLine("Description     : " + exercise.description);
+    m_console.writeLine("Full description: " + exercise.fullDescription);
+    m_console.writeLine("Class           : " + FileNaming::className(courseId, exercise.number));
+    m_console.writeLine("Header          : " + header.string());
+    m_console.writeLine("Source          : " + source.string());
+    m_console.writeLine(kLine);
+}
+
+void CliApp::deleteExercise(const Course& course)
+{
+    const std::optional<std::size_t> index = pickExercise(course);
+    if (!index.has_value())
+    {
+        return;
+    }
+    const Exercise& exercise = course.exercises[*index];
+
+    m_console.clearScreen();
+    m_console.writeLine(kLine);
+    m_console.writeLine("             Delete exercise");
+    m_console.writeLine(kLine);
+    showExerciseInfo(course.id, exercise);
+
+    const std::optional<bool> confirmed = ConsoleUtils::askYesNo(
+        m_console, "Delete this exercise and its files? This cannot be undone.");
+    if (!confirmed.has_value())
+    {
+        return;
+    }
+    if (!*confirmed)
+    {
+        m_console.writeLine("Deletion cancelled.");
+        ConsoleUtils::waitForEnter(m_console);
+        return;
+    }
+
+    runGuarded(
+        [&]()
+        {
+            // The real exercise number is used here, not the position in the list.
+            m_exercises.deleteExercise(course.id, exercise.number);
+            m_console.writeLine("Exercise deleted successfully. Name: " + exercise.name);
+        });
+}
+
 CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
 {
     while (true)
@@ -433,6 +504,9 @@ CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
         {
         case ExercisesOption::Add:
             addExercise(courseId);
+            break;
+        case ExercisesOption::Delete:
+            deleteExercise(course);
             break;
         case ExercisesOption::BackToCourses:
             return CourseScreenResult::BackToCourses;

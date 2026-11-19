@@ -92,6 +92,16 @@ class CliApp
     // The "Add exercise" option: asks for the data and adds the exercise to the course.
     void addExercise(int courseId);
 
+    // Asks for one of the shown exercises and returns its position in the list (the exercises
+    // must be in the order they are shown), or no value if there are none or the input ended.
+    std::optional<std::size_t> pickExercise(const Course& course);
+
+    // Prints the details of one exercise: name, descriptions, class name and its real files.
+    void showExerciseInfo(int courseId, const Exercise& exercise);
+
+    // The "Delete exercise" option: asks which exercise, asks to confirm, and deletes it.
+    void deleteExercise(const Course& course);
+
     IConsole& m_console;
     ICourseRepository& m_repository;
     CourseService& m_courses;
