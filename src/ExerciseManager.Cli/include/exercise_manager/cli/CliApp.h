@@ -109,6 +109,10 @@ class CliApp
     // agrees, builds and runs it.
     void openExercise(const Course& course);
 
+    // The "Set default exercise" option: shows the current default exercise of this course,
+    // then chooses or resets it.
+    void setDefaultExercise(const Course& course);
+
     IConsole& m_console;
     ICourseRepository& m_repository;
     CourseService& m_courses;

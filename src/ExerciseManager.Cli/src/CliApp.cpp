@@ -82,6 +82,34 @@ DefaultCourseCheck checkDefaultCourse(const DefaultsStore& defaults,
     }
 }
 
+struct DefaultExerciseCheck
+{
+    DefaultState state = DefaultState::NotSet;
+    int exerciseNumber = 0;
+};
+
+// Looks at the stored default exercise of a course and checks it against its exercises.
+DefaultExerciseCheck checkDefaultExercise(const DefaultsStore& defaults, const Course& course)
+{
+    try
+    {
+        const std::optional<int> stored = defaults.loadDefaultExercise(course.id);
+        if (!stored.has_value())
+        {
+            return {DefaultState::NotSet, 0};
+        }
+
+        const bool exists =
+            std::any_of(course.exercises.begin(), course.exercises.end(),
+                        [&stored](const Exercise& exercise) { return exercise.number == *stored; });
+        return {exists ? DefaultState::Valid : DefaultState::Missing, *stored};
+    }
+    catch (const StorageError&)
+    {
+        return {DefaultState::Unreadable, 0};
+    }
+}
+
 // Asks for a position in a list that is shown numbered 1..N. The number typed is only the
 // position in the list, never the real course or exercise number.
 // Returns the position as a 0-based index, or no value if the list is empty or the input ended.
@@ -537,6 +565,74 @@ void CliApp::openExercise(const Course& course)
         });
 }
 
+void CliApp::setDefaultExercise(const Course& course)
+{
+    m_console.clearScreen();
+    m_console.writeLine(kLine);
+    m_console.writeLine("          Set default exercise");
+    m_console.writeLine(kLine);
+
+    const DefaultExerciseCheck check = checkDefaultExercise(m_defaults, course);
+    switch (check.state)
+    {
+    case DefaultState::NotSet:
+        m_console.writeLine("No default exercise is set.");
+        break;
+    case DefaultState::Valid:
+        for (const Exercise& exercise : course.exercises)
+        {
+            if (exercise.number == check.exerciseNumber)
+            {
+                m_console.writeLine("Default exercise: " + exercise.name);
+            }
+        }
+        break;
+    case DefaultState::Missing:
+        m_console.writeLine("The default exercise does not exist anymore.");
+        break;
+    case DefaultState::Unreadable:
+        m_console.writeLine("The default exercise file cannot be read.");
+        break;
+    }
+
+    m_console.writeLine("[1] Choose the default exercise");
+    m_console.writeLine("[2] Reset (no default exercise)");
+    m_console.writeLine(kLine);
+
+    const std::optional<int> choice =
+        ConsoleUtils::readNumber(m_console, "Choose option [1-2]: ", 1, 2);
+    if (!choice.has_value())
+    {
+        return;
+    }
+
+    if (*choice == 2)
+    {
+        runGuarded(
+            [&]()
+            {
+                m_defaults.clearDefaultExercise(course.id);
+                m_console.writeLine("Default exercise removed.");
+            });
+        return;
+    }
+
+    const std::optional<std::size_t> index = pickExercise(course);
+    if (!index.has_value())
+    {
+        return;
+    }
+    const Exercise& exercise = course.exercises[*index];
+
+    runGuarded(
+        [&]()
+        {
+            // The real exercise number is stored, not the position in the list.
+            m_defaults.saveDefaultExercise(course.id, exercise.number);
+            m_console.writeLine("Default exercise set. Name: " + exercise.name);
+        });
+}
+
 CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
 {
     while (true)
@@ -584,6 +680,9 @@ CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
         {
         case ExercisesOption::Open:
             openExercise(course);
+            break;
+        case ExercisesOption::SetDefault:
+            setDefaultExercise(course);
             break;
         case ExercisesOption::Add:
             addExercise(courseId);

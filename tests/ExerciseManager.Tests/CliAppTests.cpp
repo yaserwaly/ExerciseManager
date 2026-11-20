@@ -1212,3 +1212,120 @@ TEST_F(CliAppTests, OpenExerciseRunsNothingWhenTheInputEndsAtTheQuestion)
 
     EXPECT_TRUE(m_runner.calls.empty());
 }
+
+// ---------- set default exercise ----------
+
+TEST_F(CliAppTests, SetDefaultExerciseSavesTheRealExerciseNumberNotThePosition)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x"); // real number 1
+    m_exercises->addExercise(1, "b", "bd", "x"); // real number 2
+    m_exercises->addExercise(1, "c", "cd", "x"); // real number 3
+    m_exercises->addExercise(1, "d", "dd", "x"); // real number 4
+    m_exercises->deleteExercise(1, 1);
+    m_exercises->deleteExercise(1, 3);
+    // The list shows b as 1 and d as 2. Typing 2 chooses d, whose real number is 4.
+    FakeConsole console{"1", "1", "2", "1", "2", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_defaults->loadDefaultExercise(1), 4);
+    EXPECT_TRUE(contains(console.output(), "Default exercise set. Name: d\n"));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, SetDefaultExerciseShowsTheCurrentDefaultAndResetRemovesIt)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    m_defaults->saveDefaultExercise(1, 1);
+    FakeConsole console{"1", "1", "2", "2", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Default exercise: adder\n"));
+    EXPECT_TRUE(contains(console.output(), "Default exercise removed.\n"));
+    EXPECT_FALSE(m_defaults->loadDefaultExercise(1).has_value());
+}
+
+TEST_F(CliAppTests, SetDefaultExerciseShowsWhenThereIsNoDefault)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "2", "2", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "No default exercise is set.\n"));
+}
+
+TEST_F(CliAppTests, SetDefaultExerciseShowsWhenTheDefaultDoesNotExist)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_defaults->saveDefaultExercise(1, 5);
+    FakeConsole console{"1", "1", "2", "2", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "The default exercise does not exist anymore.\n"));
+    EXPECT_FALSE(m_defaults->loadDefaultExercise(1).has_value());
+}
+
+TEST_F(CliAppTests, SetDefaultExerciseCanFixAnUnreadableDefaultFile)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    std::ofstream(m_workspace->defaultExerciseFile(1), std::ios::binary) << "this is not json";
+    FakeConsole console{"1", "1", "2", "1", "1", "", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "The default exercise file cannot be read.\n"));
+    EXPECT_EQ(m_defaults->loadDefaultExercise(1), 1);
+}
+
+TEST_F(CliAppTests, SetDefaultExerciseWithNoExercisesShowsAMessage)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "2", "1", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "There are no exercises.\n"));
+    EXPECT_FALSE(m_defaults->loadDefaultExercise(1).has_value());
+}
+
+TEST_F(CliAppTests, SetDefaultExerciseAsksAgainWhenTheOptionIsNotValid)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "2", "3", "2", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 2.\n"));
+}
+
+TEST_F(CliAppTests, EachCourseHasItsOwnDefaultExercise)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_courses->addCourse("second", "c", "d");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    m_exercises->addExercise(2, "sum", "Sums", "full");
+    FakeConsole console{"1", "1", "2", "1", "1", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_EQ(m_defaults->loadDefaultExercise(1), 1);
+    EXPECT_FALSE(m_defaults->loadDefaultExercise(2).has_value());
+}
+
+TEST_F(CliAppTests, SetDefaultExerciseSavesNothingWhenTheInputEndsInTheMiddle)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "2", "1"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_FALSE(m_defaults->loadDefaultExercise(1).has_value());
+}
