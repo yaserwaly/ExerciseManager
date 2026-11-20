@@ -146,6 +146,12 @@ int CliApp::run()
 {
     try
     {
+        // The default course is checked once, when the program starts. Going back to the
+        // courses screen later never opens it again.
+        if (openDefaultCourse() == CourseScreenResult::Exit)
+        {
+            return 0;
+        }
         runCoursesScreen();
         return 0;
     }
@@ -675,6 +681,41 @@ void CliApp::openDefaultExercise(const Course& course)
                 m_console.writeLine("Default exercise removed.");
             });
     }
+}
+
+CliApp::CourseScreenResult CliApp::openDefaultCourse()
+{
+    const std::vector<Course> courses = m_courses.listCourses();
+    const DefaultCourseCheck check = checkDefaultCourse(m_defaults, courses);
+    switch (check.state)
+    {
+    case DefaultState::NotSet:
+        return CourseScreenResult::BackToCourses;
+    case DefaultState::Valid:
+        return runCourseScreen(check.courseId);
+    case DefaultState::Missing:
+        m_console.clearScreen();
+        m_console.writeLine("The default course does not exist anymore.");
+        break;
+    case DefaultState::Unreadable:
+        m_console.clearScreen();
+        m_console.writeLine("The default course file cannot be read.");
+        break;
+    }
+
+    // The stored default is not valid. If the user says no, the courses screen is shown.
+    const std::optional<bool> reset =
+        ConsoleUtils::askYesNo(m_console, "Reset the default course?");
+    if (reset.has_value() && *reset)
+    {
+        runGuarded(
+            [&]()
+            {
+                m_defaults.clearDefaultCourse();
+                m_console.writeLine("Default course removed.");
+            });
+    }
+    return CourseScreenResult::BackToCourses;
 }
 
 CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)

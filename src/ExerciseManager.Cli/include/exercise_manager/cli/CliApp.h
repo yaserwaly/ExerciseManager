@@ -117,6 +117,11 @@ class CliApp
     // valid, or offers to reset it if it is not.
     void openDefaultExercise(const Course& course);
 
+    // Called once when the program starts: opens the default course if it is valid, or
+    // offers to reset it if it is not. Returns Exit if the user left the program from the
+    // default course, otherwise BackToCourses (go on to the courses screen).
+    CourseScreenResult openDefaultCourse();
+
     // The "Set default exercise" option: shows the current default exercise of this course,
     // then chooses or resets it.
     void setDefaultExercise(const Course& course);

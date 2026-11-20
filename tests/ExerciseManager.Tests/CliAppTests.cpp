@@ -506,7 +506,8 @@ TEST_F(CliAppTests, SetDefaultCourseShowsTheCurrentDefaultAndResetRemovesIt)
 {
     m_courses->addCourse("first", "a", "b");
     m_defaults->saveDefaultCourse(1);
-    FakeConsole console{"2", "2", "", "6"};
+    // The program starts in the default course, so "6" goes back to the courses screen first.
+    FakeConsole console{"6", "2", "2", "", "6"};
 
     runApp(console);
 
@@ -527,11 +528,14 @@ TEST_F(CliAppTests, SetDefaultCourseShowsWhenThereIsNoDefault)
 TEST_F(CliAppTests, SetDefaultCourseShowsWhenTheDefaultDoesNotExist)
 {
     m_defaults->saveDefaultCourse(5);
-    FakeConsole console{"2", "2", "", "6"};
+    // At the start the program offers a reset, so the first answer is "n".
+    FakeConsole console{"n", "2", "2", "", "6"};
 
     runApp(console);
 
-    EXPECT_TRUE(contains(console.output(), "The default course does not exist anymore.\n"));
+    // The message is shown at the start and again on the set default screen.
+    EXPECT_EQ(countOccurrences(console.output(), "The default course does not exist anymore.\n"),
+              2);
     EXPECT_FALSE(m_defaults->loadDefaultCourse().has_value());
 }
 
@@ -539,11 +543,13 @@ TEST_F(CliAppTests, SetDefaultCourseCanFixAnUnreadableDefaultFile)
 {
     m_courses->addCourse("first", "a", "b");
     std::ofstream(m_workspace->defaultCourseFile(), std::ios::binary) << "this is not json";
-    FakeConsole console{"2", "1", "1", "", "6"};
+    // At the start the program offers a reset, so the first answer is "n".
+    FakeConsole console{"n", "2", "1", "1", "", "6"};
 
     EXPECT_EQ(runApp(console), 0);
 
-    EXPECT_TRUE(contains(console.output(), "The default course file cannot be read.\n"));
+    // The message is shown at the start and again on the set default screen.
+    EXPECT_EQ(countOccurrences(console.output(), "The default course file cannot be read.\n"), 2);
     EXPECT_EQ(m_defaults->loadDefaultCourse(), 1);
 }
 
@@ -573,7 +579,9 @@ TEST_F(CliAppTests, ResettingTheDefaultCourseKeepsTheDefaultExerciseOfThatCourse
     m_exercises->addExercise(1, "adder", "", "");
     m_defaults->saveDefaultCourse(1);
     m_defaults->saveDefaultExercise(1, 1);
-    FakeConsole console{"2", "2", "", "6"};
+    // The program starts in the default course and opens its default exercise ("n"), then
+    // "6" goes back to the courses screen.
+    FakeConsole console{"n", "6", "2", "2", "", "6"};
 
     runApp(console);
 
@@ -1474,4 +1482,128 @@ TEST_F(CliAppTests, TheProgramEndsWhenTheInputEndsAtTheResetQuestion)
     EXPECT_EQ(runApp(console), 0);
 
     EXPECT_EQ(m_defaults->loadDefaultExercise(1), 5);
+}
+
+// ---------- default course at the start ----------
+
+TEST_F(CliAppTests, TheDefaultCourseOpensAtTheStartBeforeTheCoursesScreen)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_defaults->saveDefaultCourse(1);
+    FakeConsole console{"6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const std::string& output = console.output();
+    ASSERT_NE(output.find("Exercises:"), std::string::npos);
+    ASSERT_NE(output.find("[1] Open course\n"), std::string::npos);
+    EXPECT_LT(output.find("Exercises:"), output.find("[1] Open course\n"));
+}
+
+TEST_F(CliAppTests, ExitFromTheDefaultCourseEndsTheProgramWithoutTheCoursesScreen)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_defaults->saveDefaultCourse(1);
+    FakeConsole console{"7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(countOccurrences(console.output(), "[1] Open course\n"), 0);
+}
+
+TEST_F(CliAppTests, TheDefaultCourseOpensItsDefaultExerciseAtTheStart)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    m_defaults->saveDefaultCourse(1);
+    m_defaults->saveDefaultExercise(1, 1);
+    FakeConsole console{"n", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Run the exercise?"), 1);
+}
+
+TEST_F(CliAppTests, BackFromTheDefaultCourseShowsTheCoursesScreenAndDoesNotReopenIt)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_defaults->saveDefaultCourse(1);
+    FakeConsole console{"6", "6"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "[1] Open course\n"), 1);
+    EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 1);
+}
+
+TEST_F(CliAppTests, WithoutADefaultCourseTheCoursesScreenIsShownFirst)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"6"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 0);
+    EXPECT_EQ(countOccurrences(console.output(), "[1] Open course\n"), 1);
+}
+
+TEST_F(CliAppTests, ADefaultCourseThatDoesNotExistOffersAResetAndYesRemovesIt)
+{
+    m_defaults->saveDefaultCourse(5);
+    FakeConsole console{"y", "", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "The default course does not exist anymore.\n"));
+    EXPECT_TRUE(contains(console.output(), "Reset the default course? (y/n): "));
+    EXPECT_TRUE(contains(console.output(), "Default course removed.\n"));
+    EXPECT_FALSE(m_defaults->loadDefaultCourse().has_value());
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+    EXPECT_EQ(countOccurrences(console.output(), "[1] Open course\n"), 1);
+}
+
+TEST_F(CliAppTests, ADefaultCourseThatDoesNotExistKeepsItWhenTheAnswerIsNo)
+{
+    m_defaults->saveDefaultCourse(5);
+    FakeConsole console{"n", "6"};
+
+    runApp(console);
+
+    EXPECT_EQ(m_defaults->loadDefaultCourse(), 5);
+    EXPECT_EQ(countOccurrences(console.output(), "[1] Open course\n"), 1);
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, AnUnreadableDefaultCourseFileOffersAReset)
+{
+    std::ofstream(m_workspace->defaultCourseFile(), std::ios::binary) << "this is not json";
+    FakeConsole console{"y", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "The default course file cannot be read.\n"));
+    EXPECT_FALSE(m_defaults->loadDefaultCourse().has_value());
+}
+
+TEST_F(CliAppTests, TheProgramEndsWhenTheInputEndsAtTheDefaultCourseResetQuestion)
+{
+    m_defaults->saveDefaultCourse(5);
+    FakeConsole console;
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_defaults->loadDefaultCourse(), 5);
+}
+
+TEST_F(CliAppTests, SettingTheDefaultCourseDoesNotOpenItUntilTheNextStart)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"2", "1", "1", "", "6"};
+
+    runApp(console);
+
+    EXPECT_EQ(m_defaults->loadDefaultCourse(), 1);
+    // The courses screen is shown again after setting it. The course screen is not opened.
+    EXPECT_EQ(countOccurrences(console.output(), "[1] Open course\n"), 2);
+    EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 0);
 }
