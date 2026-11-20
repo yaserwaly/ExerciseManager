@@ -109,6 +109,14 @@ class CliApp
     // agrees, builds and runs it.
     void openExercise(const Course& course);
 
+    // The exercise screen: shows the details of one exercise and, if the user agrees,
+    // builds and runs it. Afterwards the caller shows the exercises list again.
+    void runExerciseScreen(const Course& course, const Exercise& exercise);
+
+    // Called once when the user arrives at a course: opens the default exercise if it is
+    // valid, or offers to reset it if it is not.
+    void openDefaultExercise(const Course& course);
+
     // The "Set default exercise" option: shows the current default exercise of this course,
     // then chooses or resets it.
     void setDefaultExercise(const Course& course);

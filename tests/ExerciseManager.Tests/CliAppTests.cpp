@@ -918,7 +918,8 @@ TEST_F(CliAppTests, DeleteExerciseClearsItsDefaultExercise)
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_defaults->saveDefaultExercise(1, 1);
-    FakeConsole console{"1", "1", "5", "1", "y", "", "6", "6"};
+    // Arriving at the course opens its default exercise first, so the first answer is "n".
+    FakeConsole console{"1", "1", "n", "5", "1", "y", "", "6", "6"};
 
     runApp(console);
 
@@ -1239,7 +1240,8 @@ TEST_F(CliAppTests, SetDefaultExerciseShowsTheCurrentDefaultAndResetRemovesIt)
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_defaults->saveDefaultExercise(1, 1);
-    FakeConsole console{"1", "1", "2", "2", "", "6", "6"};
+    // Arriving at the course opens its default exercise first, so the first answer is "n".
+    FakeConsole console{"1", "1", "n", "2", "2", "", "6", "6"};
 
     runApp(console);
 
@@ -1262,11 +1264,14 @@ TEST_F(CliAppTests, SetDefaultExerciseShowsWhenTheDefaultDoesNotExist)
 {
     m_courses->addCourse("first", "a", "b");
     m_defaults->saveDefaultExercise(1, 5);
-    FakeConsole console{"1", "1", "2", "2", "", "6", "6"};
+    // Arriving at the course offers a reset first, so the first answer is "n".
+    FakeConsole console{"1", "1", "n", "2", "2", "", "6", "6"};
 
     runApp(console);
 
-    EXPECT_TRUE(contains(console.output(), "The default exercise does not exist anymore.\n"));
+    // The message is shown on arrival and again on the set default screen.
+    EXPECT_EQ(countOccurrences(console.output(), "The default exercise does not exist anymore.\n"),
+              2);
     EXPECT_FALSE(m_defaults->loadDefaultExercise(1).has_value());
 }
 
@@ -1275,11 +1280,13 @@ TEST_F(CliAppTests, SetDefaultExerciseCanFixAnUnreadableDefaultFile)
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
     std::ofstream(m_workspace->defaultExerciseFile(1), std::ios::binary) << "this is not json";
-    FakeConsole console{"1", "1", "2", "1", "1", "", "6", "6"};
+    // Arriving at the course offers to reset the damaged file first, so the first answer is "n".
+    FakeConsole console{"1", "1", "n", "2", "1", "1", "", "6", "6"};
 
     EXPECT_EQ(runApp(console), 0);
 
-    EXPECT_TRUE(contains(console.output(), "The default exercise file cannot be read.\n"));
+    // The message is shown on arrival and again on the set default screen.
+    EXPECT_EQ(countOccurrences(console.output(), "The default exercise file cannot be read.\n"), 2);
     EXPECT_EQ(m_defaults->loadDefaultExercise(1), 1);
 }
 
@@ -1328,4 +1335,143 @@ TEST_F(CliAppTests, SetDefaultExerciseSavesNothingWhenTheInputEndsInTheMiddle)
     EXPECT_EQ(runApp(console), 0);
 
     EXPECT_FALSE(m_defaults->loadDefaultExercise(1).has_value());
+}
+
+// ---------- default exercise on arrival ----------
+
+TEST_F(CliAppTests, ArrivingAtACourseOpensItsDefaultExerciseBeforeTheList)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    m_defaults->saveDefaultExercise(1, 1);
+    FakeConsole console{"1", "1", "n", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const std::string& output = console.output();
+    EXPECT_TRUE(contains(output, "Class           : ClsC01Exercise001\n"));
+    ASSERT_NE(output.find("Run the exercise?"), std::string::npos);
+    ASSERT_NE(output.find("Exercises:"), std::string::npos);
+    EXPECT_LT(output.find("Run the exercise?"), output.find("Exercises:"));
+    EXPECT_TRUE(m_runner.calls.empty());
+}
+
+TEST_F(CliAppTests, TheDefaultExerciseRunsAndThenTheListIsShownWithoutReopeningIt)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    m_defaults->saveDefaultExercise(1, 1);
+    FakeConsole console{"1", "1", "y", "", "6", "6"};
+
+    runApp(console);
+
+    ASSERT_EQ(m_runner.calls.size(), 1u);
+    EXPECT_EQ(m_runner.calls[0].first, 1);
+    EXPECT_EQ(m_runner.calls[0].second, 1);
+    EXPECT_EQ(countOccurrences(console.output(), "Run the exercise?"), 1);
+    EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 1);
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, RefreshingTheListDoesNotOpenTheDefaultExerciseAgain)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    m_defaults->saveDefaultExercise(1, 1);
+    FakeConsole console{"1", "1", "n", "3", "second", "s", "f", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Run the exercise?"), 1);
+    EXPECT_EQ(m_repository->load(1).exercises.size(), 2u);
+}
+
+TEST_F(CliAppTests, OpeningTheCourseAgainChecksTheDefaultExerciseAgain)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    m_defaults->saveDefaultExercise(1, 1);
+    FakeConsole console{"1", "1", "n", "6", "1", "1", "n", "6", "6"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Run the exercise?"), 2);
+}
+
+TEST_F(CliAppTests, TheDefaultExerciseOfAnotherCourseIsNotOpened)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_courses->addCourse("second", "c", "d");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    m_defaults->saveDefaultExercise(1, 1);
+    FakeConsole console{"1", "2", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Run the exercise?"), 0);
+    EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 1);
+}
+
+TEST_F(CliAppTests, WithoutADefaultExerciseTheListIsShownDirectly)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Run the exercise?"), 0);
+    EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 1);
+}
+
+TEST_F(CliAppTests, ADefaultExerciseThatDoesNotExistOffersAResetAndYesRemovesIt)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_defaults->saveDefaultExercise(1, 5);
+    FakeConsole console{"1", "1", "y", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "The default exercise does not exist anymore.\n"));
+    EXPECT_TRUE(contains(console.output(), "Reset the default exercise? (y/n): "));
+    EXPECT_TRUE(contains(console.output(), "Default exercise removed.\n"));
+    EXPECT_FALSE(m_defaults->loadDefaultExercise(1).has_value());
+    EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 1);
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, ADefaultExerciseThatDoesNotExistKeepsItWhenTheAnswerIsNo)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_defaults->saveDefaultExercise(1, 5);
+    FakeConsole console{"1", "1", "n", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_EQ(m_defaults->loadDefaultExercise(1), 5);
+    EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 1);
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, AnUnreadableDefaultExerciseFileOffersAReset)
+{
+    m_courses->addCourse("first", "a", "b");
+    std::ofstream(m_workspace->defaultExerciseFile(1), std::ios::binary) << "this is not json";
+    FakeConsole console{"1", "1", "y", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "The default exercise file cannot be read.\n"));
+    EXPECT_FALSE(m_defaults->loadDefaultExercise(1).has_value());
+}
+
+TEST_F(CliAppTests, TheProgramEndsWhenTheInputEndsAtTheResetQuestion)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_defaults->saveDefaultExercise(1, 5);
+    FakeConsole console{"1", "1"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_defaults->loadDefaultExercise(1), 5);
 }

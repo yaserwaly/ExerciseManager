@@ -538,8 +538,11 @@ void CliApp::openExercise(const Course& course)
     {
         return;
     }
-    const Exercise& exercise = course.exercises[*index];
+    runExerciseScreen(course, course.exercises[*index]);
+}
 
+void CliApp::runExerciseScreen(const Course& course, const Exercise& exercise)
+{
     m_console.clearScreen();
     m_console.writeLine(kLine);
     m_console.writeLine("                Exercise");
@@ -633,8 +636,50 @@ void CliApp::setDefaultExercise(const Course& course)
         });
 }
 
+void CliApp::openDefaultExercise(const Course& course)
+{
+    const DefaultExerciseCheck check = checkDefaultExercise(m_defaults, course);
+    switch (check.state)
+    {
+    case DefaultState::NotSet:
+        return;
+    case DefaultState::Valid:
+        for (const Exercise& exercise : course.exercises)
+        {
+            if (exercise.number == check.exerciseNumber)
+            {
+                runExerciseScreen(course, exercise);
+                return;
+            }
+        }
+        return;
+    case DefaultState::Missing:
+        m_console.clearScreen();
+        m_console.writeLine("The default exercise does not exist anymore.");
+        break;
+    case DefaultState::Unreadable:
+        m_console.clearScreen();
+        m_console.writeLine("The default exercise file cannot be read.");
+        break;
+    }
+
+    // The stored default is not valid. If the user says no, the normal list is shown.
+    const std::optional<bool> reset =
+        ConsoleUtils::askYesNo(m_console, "Reset the default exercise?");
+    if (reset.has_value() && *reset)
+    {
+        runGuarded(
+            [&]()
+            {
+                m_defaults.clearDefaultExercise(course.id);
+                m_console.writeLine("Default exercise removed.");
+            });
+    }
+}
+
 CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
 {
+    bool justArrived = true;
     while (true)
     {
         // The course is loaded again every time, so changes are always shown.
@@ -652,6 +697,14 @@ CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
         // The list is ordered by the real exercise number, but it is shown as 1..N.
         std::sort(course.exercises.begin(), course.exercises.end(),
                   [](const Exercise& a, const Exercise& b) { return a.number < b.number; });
+
+        // Right after arriving at the course, its default exercise is checked once. Later
+        // refreshes of the list (after an operation) never open it again.
+        if (justArrived)
+        {
+            justArrived = false;
+            openDefaultExercise(course);
+        }
 
         m_console.clearScreen();
         m_console.writeLine(kLine);
