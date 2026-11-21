@@ -36,7 +36,8 @@ The code is split into layers:
 
 \- \*\*Infrastructure\*\*: JSON storage, the workspace on disk, and the compiler.
 
-\- \*\*App\*\*: the console user interface (menus and input handling only).
+- **Cli**: the menus and the navigation between the screens. They talk to the user through a small console interface (`IConsole`), so they can be tested with a fake console.
+- **App**: the program entry point. It reads the workspace location, connects the parts and starts the CLI.
 
 
 
@@ -45,8 +46,8 @@ The code is split into layers:
 
 
 Tests use GoogleTest. Each test works on its own temporary workspace, so tests
-
-never touch real personal data.
+never touch real personal data. The CLI is tested with a fake console and a fake
+build runner, so no real console or compiler is needed.
 
 
 
