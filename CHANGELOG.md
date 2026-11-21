@@ -28,7 +28,15 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Defaults store (`DefaultsStore`): saves the default course in `Courses/DefaultCourse.json` and the default exercise of each course in `CourseNN/DefaultExercise.json`. It stores numbers only, writes safely through a temporary file, and a missing file means "no default".
 - `Workspace::defaultCourseFile()` and `Workspace::defaultExerciseFile()`, with the file name constants.
 - Deleting a course or an exercise also clears it as the default, because deleted numbers are reused: `CourseService::deleteCourse` clears the default course, and `ExerciseService::deleteExercise` clears the default exercise of its course.
+- CLI project (`ExerciseManager.Cli`, a static library): the `IConsole` interface with the real `StdConsole`, input helpers (`ConsoleUtils`: number in a range, yes/no, text, text that keeps the current value) and `CliApp` with the menus and the navigation. Navigation uses loops and returns, never nested calls, so the whole program is tested with a fake console and a fake build runner.
+- Courses screen: list, open, add, update, delete (with y/n confirmation) and set or reset the default course.
+- Course screen: the exercises list, with open (builds and runs only that exercise on demand), add, update, delete (with y/n confirmation) and set or reset the default exercise.
+- Lists are numbered 1 to N for display only. The number typed by the user is converted to the real course or exercise number, which is never shown as the list number.
+- The default course opens when the program starts, and the default exercise opens once when arriving at a course. A default that is missing or damaged is reported, and the user is asked whether to reset it.
+- Errors thrown by the Core are shown as `Error: <message>`, and a failed build shows the full compiler output. Every operation waits for Enter before the menu comes back.
+- The console app starts the CLI. It reads the workspace folder from `EXERCISE_WORKSPACE`, shows a clear message with an example when it is missing, and creates the workspace folders on start.
 
 ### Changed
 - Exercise number comment updated: deleted numbers are now reused.
 - Removed the unused `_deleted` folder from `Workspace` (`kDeletedFolder`, `deletedDir()` and its creation in `initialize()`), because exercises are now deleted permanently.
+- `Directory.Build.props` also adds the CLI include folder to every project.
