@@ -563,6 +563,7 @@ void CliApp::runExerciseScreen(const Course& course, const Exercise& exercise)
 
     m_console.clearScreen();
     m_console.writeLine("Building the exercise...");
+    m_console.writeLine("");
     runGuarded(
         [&]()
         {

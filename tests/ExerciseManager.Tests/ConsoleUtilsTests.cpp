@@ -215,3 +215,12 @@ TEST(ConsoleUtilsTests, WaitForEnterReturnsFalseWhenInputEnds)
 
     EXPECT_FALSE(ConsoleUtils::waitForEnter(console));
 }
+
+TEST(ConsoleUtilsTests, WaitForEnterShowsAnEmptyLineBeforeThePrompt)
+{
+    FakeConsole console{""};
+
+    ConsoleUtils::waitForEnter(console);
+
+    EXPECT_EQ(console.output(), "\nPress Enter to continue...");
+}

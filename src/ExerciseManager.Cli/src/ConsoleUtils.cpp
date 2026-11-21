@@ -113,6 +113,7 @@ std::optional<std::string> ConsoleUtils::readTextOrKeep(IConsole& console, std::
 
 bool ConsoleUtils::waitForEnter(IConsole& console)
 {
+    console.writeLine("");
     console.write("Press Enter to continue...");
 
     std::string line;

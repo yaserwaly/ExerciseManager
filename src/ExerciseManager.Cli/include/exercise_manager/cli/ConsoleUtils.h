@@ -49,7 +49,7 @@ class ConsoleUtils
     static std::optional<std::string> readTextOrKeep(IConsole& console, std::string_view prompt,
                                                      std::string_view current);
 
-    /// @brief Shows "Press Enter to continue..." and waits for Enter.
+    /// @brief Shows an empty line and "Press Enter to continue...", then waits for Enter.
     /// @param console The console to use.
     /// @return false if the input ended, otherwise true.
     static bool waitForEnter(IConsole& console);

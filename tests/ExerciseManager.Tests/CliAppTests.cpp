@@ -1607,3 +1607,27 @@ TEST_F(CliAppTests, SettingTheDefaultCourseDoesNotOpenItUntilTheNextStart)
     EXPECT_EQ(countOccurrences(console.output(), "[1] Open course\n"), 2);
     EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 0);
 }
+
+// ---------- spacing ----------
+
+TEST_F(CliAppTests, TheEnterPromptIsPrecededByAnEmptyLine)
+{
+    FakeConsole console{"3", "C++ Basics", "short", "full", "", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(
+        contains(console.output(),
+                 "Course created successfully. Name: C++ Basics\n\nPress Enter to continue..."));
+}
+
+TEST_F(CliAppTests, TheBuildingMessageIsFollowedByAnEmptyLine)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "1", "1", "y", "", "6", "6"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Building the exercise...\n\n"));
+}
