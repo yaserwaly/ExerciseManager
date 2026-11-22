@@ -142,6 +142,9 @@
     <ClCompile Include="ExerciseManager.App.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ExerciseManager.Cli\ExerciseManager.Cli.vcxproj">
+      <Project>{eb189efa-5a03-4570-97ba-aa26a4a3b165}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\ExerciseManager.Core\ExerciseManager.Core.vcxproj">
       <Project>{302660e9-30e9-4ade-85c8-3fc3a1d8845a}</Project>
     </ProjectReference>

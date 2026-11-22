@@ -7,7 +7,7 @@
     <ClCompile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <WarningLevel>Level4</WarningLevel>
-            <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)src\ExerciseManager.Core\include;$(MSBuildThisFileDirectory)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+            <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)src\ExerciseManager.Core\include;$(MSBuildThisFileDirectory)src\ExerciseManager.Cli\include;$(MSBuildThisFileDirectory)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExternalIncludeDirectories>$(MSBuildThisFileDirectory)third_party;%(ExternalIncludeDirectories)</ExternalIncludeDirectories>
       <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>

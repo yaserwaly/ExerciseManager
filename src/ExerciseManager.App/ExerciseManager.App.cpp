@@ -1,11 +1,75 @@
 // ExerciseManager.App.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
+#include "exercise_manager/CourseService.h"
+#include "exercise_manager/DefaultsStore.h"
+#include "exercise_manager/Errors.h"
+#include "exercise_manager/ExerciseService.h"
+#include "exercise_manager/JsonCourseRepository.h"
+#include "exercise_manager/MsvcBuildRunner.h"
+#include "exercise_manager/Workspace.h"
+#include "exercise_manager/cli/CliApp.h"
+#include "exercise_manager/cli/StdConsole.h"
+
 #include <iostream>
+#include <optional>
+
+using namespace exercise_manager;
+
+namespace
+{
+
+// Explains how to set the workspace folder, when it is missing or cannot be used.
+void printWorkspaceHelp(const WorkspaceError& error)
+{
+    std::cerr << "Error: " << error.what() << "\n\n"
+              << "Set " << Workspace::kEnvironmentVariable
+              << " to the folder of your exercises workspace.\n"
+              << "In PowerShell, for example:\n"
+              << "    $env:" << Workspace::kEnvironmentVariable
+              << " = \"C:\\Projects\\my-exercises\"\n"
+              << "In Visual Studio: App project > Properties > Debugging > Environment:\n"
+              << "    " << Workspace::kEnvironmentVariable << "=C:\\Projects\\my-exercises\n";
+}
+
+} // namespace
 
 int main()
 {
-    std::cout << "Hello World!\n";
+    std::optional<Workspace> workspace;
+    try
+    {
+        workspace.emplace(Workspace::fromEnvironment());
+        workspace->initialize();
+    }
+    catch (const WorkspaceError& error)
+    {
+        printWorkspaceHelp(error);
+        return 1;
+    }
+    catch (const ExerciseManagerError& error)
+    {
+        std::cerr << "Error: " << error.what() << '\n';
+        return 1;
+    }
+
+    try
+    {
+        JsonCourseRepository repository(*workspace);
+        CourseService courses(repository, *workspace);
+        ExerciseService exercises(repository, *workspace);
+        DefaultsStore defaults(*workspace);
+        MsvcBuildRunner runner(*workspace);
+        cli::StdConsole console;
+
+        cli::CliApp app(console, repository, courses, exercises, defaults, runner, *workspace);
+        return app.run();
+    }
+    catch (const ExerciseManagerError& error)
+    {
+        std::cerr << "Error: " << error.what() << '\n';
+        return 1;
+    }
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
