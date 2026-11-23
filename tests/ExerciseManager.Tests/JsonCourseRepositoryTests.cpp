@@ -222,17 +222,35 @@ TEST_F(JsonCourseRepositoryTests, ListCourseIdsIsEmptyForNewWorkspace)
     EXPECT_TRUE(m_repository->listCourseIds().empty());
 }
 
-TEST_F(JsonCourseRepositoryTests, ListCourseIdsReturnsSortedIds)
+TEST_F(JsonCourseRepositoryTests, ListCourseIdsReturnsIdsInStorageOrder)
 {
     m_repository->save(makeCourse(3));
     m_repository->save(makeCourse(1));
     m_repository->save(makeCourse(10));
 
-    const std::vector<int> ids = m_repository->listCourseIds();
-    ASSERT_EQ(ids.size(), 3u);
-    EXPECT_EQ(ids[0], 1);
-    EXPECT_EQ(ids[1], 3);
-    EXPECT_EQ(ids[2], 10);
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{3, 1, 10}));
+}
+
+TEST_F(JsonCourseRepositoryTests, SaveAppendsNewCourseAtTheEnd)
+{
+    m_repository->save(makeCourse(5));
+    m_repository->save(makeCourse(2));
+
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{5, 2}));
+}
+
+TEST_F(JsonCourseRepositoryTests, SaveKeepsThePositionOfAnExistingCourse)
+{
+    m_repository->save(makeCourse(3));
+    m_repository->save(makeCourse(1));
+    m_repository->save(makeCourse(2));
+
+    Course changed = makeCourse(3);
+    changed.name = "Renamed";
+    m_repository->save(changed);
+
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{3, 1, 2}));
+    EXPECT_EQ(m_repository->load(3).name, "Renamed");
 }
 
 TEST_F(JsonCourseRepositoryTests, ListCourseIdsIgnoresFoldersThatAreNotListed)

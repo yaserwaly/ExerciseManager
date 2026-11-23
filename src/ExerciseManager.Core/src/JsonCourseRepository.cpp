@@ -290,9 +290,6 @@ void JsonCourseRepository::save(const Course& course)
         entries.push_back(entry);
     }
 
-    std::sort(entries.begin(), entries.end(),
-              [](const CourseEntry& a, const CourseEntry& b) { return a.id < b.id; });
-
     // Exercises first: if something fails in between, the course is just not listed yet.
     writeJsonFile(exercisesFile, exercisesToJson(course));
     writeJsonFile(m_workspace.coursesFile(), coursesToJson(entries));
@@ -325,7 +322,6 @@ std::vector<int> JsonCourseRepository::listCourseIds() const
         ids.push_back(entry.id);
     }
 
-    std::sort(ids.begin(), ids.end());
     return ids;
 }
 

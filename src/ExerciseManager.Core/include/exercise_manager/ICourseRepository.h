@@ -40,7 +40,10 @@ class ICourseRepository
     /// @throws StorageError if the stored data cannot be read or written.
     virtual void remove(int courseId) = 0;
 
-    /// @brief Lists the numbers of all stored courses, sorted ascending.
+    /// @brief Lists the numbers of all stored courses, in the order they are stored.
+    ///
+    /// The stored order is the display order: a new course goes to the end, and saving
+    /// an existing course keeps its position.
     virtual std::vector<int> listCourseIds() const = 0;
 };
 
