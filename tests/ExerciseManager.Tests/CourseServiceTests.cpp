@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <algorithm>
 
 namespace fs = std::filesystem;
 
@@ -37,44 +38,66 @@ class FakeCourseRepository : public ICourseRepository
   public:
     Course load(int courseId) const override
     {
-        const auto it = m_courses.find(courseId);
+        const auto it = find(courseId);
         if (it == m_courses.end())
         {
             throw CourseNotFoundError("Course does not exist.");
         }
-        return it->second;
+        return *it;
     }
 
     void save(const Course& course) override
     {
-        m_courses[course.id] = course;
+        const auto it = find(course.id);
+        if (it != m_courses.end())
+        {
+            *it = course;
+        }
+        else
+        {
+            m_courses.push_back(course);
+        }
     }
 
     bool exists(int courseId) const override
     {
-        return m_courses.count(courseId) > 0;
+        return find(courseId) != m_courses.end();
     }
 
     void remove(int courseId) override
     {
-        if (m_courses.erase(courseId) == 0)
+        const auto it = find(courseId);
+        if (it == m_courses.end())
         {
             throw CourseNotFoundError("Course does not exist.");
         }
+        m_courses.erase(it);
     }
 
     std::vector<int> listCourseIds() const override
     {
         std::vector<int> ids;
-        for (const auto& entry : m_courses)
+        for (const Course& course : m_courses)
         {
-            ids.push_back(entry.first);
+            ids.push_back(course.id);
         }
         return ids;
     }
 
   private:
-    std::map<int, Course> m_courses;
+    std::vector<Course>::iterator find(int courseId)
+    {
+        return std::find_if(m_courses.begin(), m_courses.end(),
+                            [courseId](const Course& course) { return course.id == courseId; });
+    }
+
+    std::vector<Course>::const_iterator find(int courseId) const
+    {
+        return std::find_if(m_courses.begin(), m_courses.end(),
+                            [courseId](const Course& course) { return course.id == courseId; });
+    }
+
+    std::vector<Course> m_courses;
 };
 
 Course makeCourse(int id, const std::string& name)
@@ -272,7 +295,7 @@ TEST_F(CourseServiceFixture, ListCoursesIsEmptyWhenThereAreNoCourses)
     EXPECT_TRUE(m_service->listCourses().empty());
 }
 
-TEST_F(CourseServiceFixture, ListCoursesReturnsAllCoursesSortedByNumber)
+TEST_F(CourseServiceFixture, ListCoursesReturnsCoursesInStorageOrder)
 {
     m_repository.save(makeCourse(3, "three"));
     m_repository.save(makeCourse(1, "one"));
@@ -280,10 +303,27 @@ TEST_F(CourseServiceFixture, ListCoursesReturnsAllCoursesSortedByNumber)
 
     const std::vector<Course> courses = m_service->listCourses();
     ASSERT_EQ(courses.size(), 3u);
-    EXPECT_EQ(courses[0].id, 1);
-    EXPECT_EQ(courses[1].id, 3);
+    EXPECT_EQ(courses[0].id, 3);
+    EXPECT_EQ(courses[1].id, 1);
     EXPECT_EQ(courses[2].id, 10);
     EXPECT_EQ(courses[2].name, "ten");
+}
+
+TEST_F(CourseServiceFixture, ANewCourseThatReusesAFreeNumberIsListedLast)
+{
+    m_service->addCourse("first", "", "");  // number 1
+    m_service->addCourse("second", "", ""); // number 2
+    m_service->addCourse("third", "", "");  // number 3
+    m_service->deleteCourse(1);
+
+    EXPECT_EQ(m_service->addCourse("fourth", "", ""), 1);
+
+    const std::vector<Course> courses = m_service->listCourses();
+    ASSERT_EQ(courses.size(), 3u);
+    EXPECT_EQ(courses[0].id, 2);
+    EXPECT_EQ(courses[1].id, 3);
+    EXPECT_EQ(courses[2].id, 1);
+    EXPECT_EQ(courses[2].name, "fourth");
 }
 
 // ---------- deleteCourse ----------

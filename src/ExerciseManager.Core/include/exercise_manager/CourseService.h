@@ -72,7 +72,7 @@ class CourseService
     /// @throws StorageError if the stored data cannot be read or written.
     void deleteCourse(int courseId);
 
-    /// @brief Lists all courses, sorted by number.
+    /// @brief Lists all courses, in the order they are stored (the display order).
     /// @return The stored courses, each with its exercises.
     /// @throws StorageError if the stored data cannot be read or is invalid.
     std::vector<Course> listCourses() const;

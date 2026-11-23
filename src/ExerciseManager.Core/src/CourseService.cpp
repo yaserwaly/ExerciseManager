@@ -143,8 +143,7 @@ void CourseService::deleteCourse(int courseId)
 
 std::vector<Course> CourseService::listCourses() const
 {
-    std::vector<int> ids = m_repository.listCourseIds();
-    std::sort(ids.begin(), ids.end());
+    const std::vector<int> ids = m_repository.listCourseIds();
 
     std::vector<Course> courses;
     courses.reserve(ids.size());
