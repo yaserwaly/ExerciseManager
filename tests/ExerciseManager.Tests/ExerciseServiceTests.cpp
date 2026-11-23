@@ -341,6 +341,42 @@ TEST_F(ExerciseServiceFixture, DeletedNumberIsReusedByNextExercise)
     EXPECT_EQ(m_service->addExercise(1, "product", "", ""), 1);
 }
 
+TEST_F(ExerciseServiceFixture, ANewExerciseThatReusesAFreeNumberIsListedLast)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "first", "", "");  // number 1
+    m_service->addExercise(1, "second", "", ""); // number 2
+    m_service->addExercise(1, "third", "", "");  // number 3
+    m_service->deleteExercise(1, 1);
+
+    EXPECT_EQ(m_service->addExercise(1, "fourth", "", ""), 1);
+
+    const Course course = m_repository.load(1);
+    ASSERT_EQ(course.exercises.size(), 3u);
+    EXPECT_EQ(course.exercises[0].number, 2);
+    EXPECT_EQ(course.exercises[1].number, 3);
+    EXPECT_EQ(course.exercises[2].number, 1);
+    EXPECT_EQ(course.exercises[2].name, "fourth");
+}
+
+TEST_F(ExerciseServiceFixture, UpdateAndDeleteKeepTheOrderOfTheOtherExercises)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "a", "", ""); // number 1
+    m_service->addExercise(1, "b", "", ""); // number 2
+    m_service->addExercise(1, "c", "", ""); // number 3
+    m_service->deleteExercise(1, 1);
+    m_service->addExercise(1, "d", "", ""); // takes number 1, stored last
+
+    m_service->updateExercise(1, 3, "c renamed", "", "");
+    m_service->deleteExercise(1, 2);
+
+    const Course course = m_repository.load(1);
+    ASSERT_EQ(course.exercises.size(), 2u);
+    EXPECT_EQ(course.exercises[0].name, "c renamed");
+    EXPECT_EQ(course.exercises[1].name, "d");
+}
+
 TEST_F(ExerciseServiceFixture, DeleteExerciseThrowsForMissingCourse)
 {
     EXPECT_THROW(m_service->deleteExercise(5, 1), CourseNotFoundError);
