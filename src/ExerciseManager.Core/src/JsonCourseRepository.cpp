@@ -325,4 +325,33 @@ std::vector<int> JsonCourseRepository::listCourseIds() const
     return ids;
 }
 
+void JsonCourseRepository::reorder(const std::vector<int>& orderedIds)
+{
+    const std::vector<CourseEntry> entries = readCourseEntries(m_workspace);
+
+    if (orderedIds.size() != entries.size())
+    {
+        throw StorageError("The new order does not match the stored courses.");
+    }
+
+    // Same size, every number found, none repeated: so it is the same set of courses.
+    std::vector<CourseEntry> reordered;
+    reordered.reserve(entries.size());
+    for (const int id : orderedIds)
+    {
+        const auto stored = std::find_if(entries.begin(), entries.end(),
+                                         [id](const CourseEntry& entry) { return entry.id == id; });
+        const bool repeated =
+            std::any_of(reordered.begin(), reordered.end(),
+                        [id](const CourseEntry& entry) { return entry.id == id; });
+        if (stored == entries.end() || repeated)
+        {
+            throw StorageError("The new order does not match the stored courses.");
+        }
+        reordered.push_back(*stored);
+    }
+
+    writeJsonFile(m_workspace.coursesFile(), coursesToJson(reordered));
+}
+
 } // namespace exercise_manager

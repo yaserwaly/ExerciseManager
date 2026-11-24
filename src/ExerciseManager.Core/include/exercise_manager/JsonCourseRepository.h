@@ -58,6 +58,9 @@ public:
     /// @copydoc ICourseRepository::listCourseIds
     std::vector<int> listCourseIds() const override;
 
+    /// @copydoc ICourseRepository::reorder
+    void reorder(const std::vector<int>& orderedIds) override;
+
 private:
     Workspace m_workspace;
 };

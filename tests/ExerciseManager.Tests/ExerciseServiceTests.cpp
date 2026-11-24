@@ -110,6 +110,11 @@ class FakeCourseRepository : public ICourseRepository
         return ids;
     }
 
+    void reorder(const std::vector<int>&) override
+    {
+        throw StorageError("reorder is not used by these tests.");
+    }
+
   private:
     std::map<int, Course> m_courses;
     bool m_failOnSave = false;

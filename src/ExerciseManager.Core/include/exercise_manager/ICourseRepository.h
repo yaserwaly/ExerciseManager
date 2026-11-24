@@ -45,6 +45,16 @@ class ICourseRepository
     /// The stored order is the display order: a new course goes to the end, and saving
     /// an existing course keeps its position.
     virtual std::vector<int> listCourseIds() const = 0;
+
+    /// @brief Stores a new order of the courses.
+    ///
+    /// The list must contain exactly the numbers of the stored courses, each one once, in
+    /// the new order. Only the order changes: the data and the files of the courses are
+    /// not touched.
+    /// @param orderedIds The course numbers in the new order.
+    /// @throws StorageError if the list does not match the stored courses (a missing,
+    ///         unknown or repeated number), or if the stored data cannot be read or written.
+    virtual void reorder(const std::vector<int>& orderedIds) = 0;
 };
 
 } // namespace exercise_manager

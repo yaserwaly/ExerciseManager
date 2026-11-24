@@ -141,6 +141,34 @@ void CourseService::deleteCourse(int courseId)
     }
 }
 
+void CourseService::moveCourse(int courseId, int newPosition)
+{
+    std::vector<int> ids = m_repository.listCourseIds();
+
+    const auto target = std::find(ids.begin(), ids.end(), courseId);
+    if (target == ids.end())
+    {
+        throw CourseNotFoundError("Course does not exist.");
+    }
+
+    const int count = static_cast<int>(ids.size());
+    if (newPosition < 1 || newPosition > count)
+    {
+        throw InvalidPositionError("The new position is out of range.");
+    }
+
+    const int currentIndex = static_cast<int>(target - ids.begin());
+    const int newIndex = newPosition - 1;
+    if (currentIndex == newIndex)
+    {
+        return; // already there: nothing to write
+    }
+
+    ids.erase(target);
+    ids.insert(ids.begin() + newIndex, courseId);
+    m_repository.reorder(ids);
+}
+
 std::vector<Course> CourseService::listCourses() const
 {
     const std::vector<int> ids = m_repository.listCourseIds();

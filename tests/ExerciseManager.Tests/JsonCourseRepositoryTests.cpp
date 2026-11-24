@@ -316,3 +316,80 @@ TEST_F(JsonCourseRepositoryTests, RemoveDoesNotTouchTheCourseFolderFiles)
     // The repository only changes the list. Deleting the folder is the service's job.
     EXPECT_TRUE(fs::is_regular_file(m_workspace->exercisesFile(1)));
 }
+
+// ---------- reorder ----------
+
+TEST_F(JsonCourseRepositoryTests, ReorderChangesTheOrderOfListCourseIds)
+{
+    m_repository->save(makeCourse(1));
+    m_repository->save(makeCourse(2));
+    m_repository->save(makeCourse(3));
+
+    m_repository->reorder({3, 1, 2});
+
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{3, 1, 2}));
+}
+
+TEST_F(JsonCourseRepositoryTests, ReorderIsKeptByANewRepositoryObject)
+{
+    m_repository->save(makeCourse(1));
+    m_repository->save(makeCourse(2));
+
+    m_repository->reorder({2, 1});
+
+    const JsonCourseRepository reopened(*m_workspace);
+    EXPECT_EQ(reopened.listCourseIds(), (std::vector<int>{2, 1}));
+}
+
+TEST_F(JsonCourseRepositoryTests, ReorderKeepsCourseDataAndExercises)
+{
+    m_repository->save(makeCourse(1));
+    m_repository->save(makeCourse(2));
+
+    m_repository->reorder({2, 1});
+
+    const Course loaded = m_repository->load(1);
+    EXPECT_EQ(loaded.name, "C++ Basics");
+    EXPECT_EQ(loaded.fullDescription, "Basics of C++: variables, loops and functions");
+    ASSERT_EQ(loaded.exercises.size(), 2u);
+    EXPECT_EQ(loaded.exercises[1].name, "جمع رقمين");
+}
+
+TEST_F(JsonCourseRepositoryTests, ReorderLeavesNoTemporaryFile)
+{
+    m_repository->save(makeCourse(1));
+    m_repository->save(makeCourse(2));
+
+    m_repository->reorder({2, 1});
+
+    fs::path tempCourses = m_workspace->coursesFile();
+    tempCourses += ".tmp";
+    EXPECT_FALSE(fs::exists(tempCourses));
+}
+
+TEST_F(JsonCourseRepositoryTests, ReorderRejectsAListWithAMissingCourse)
+{
+    m_repository->save(makeCourse(1));
+    m_repository->save(makeCourse(2));
+
+    EXPECT_THROW(m_repository->reorder({1}), StorageError);
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{1, 2}));
+}
+
+TEST_F(JsonCourseRepositoryTests, ReorderRejectsAListWithAnUnknownCourse)
+{
+    m_repository->save(makeCourse(1));
+    m_repository->save(makeCourse(2));
+
+    EXPECT_THROW(m_repository->reorder({1, 5}), StorageError);
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{1, 2}));
+}
+
+TEST_F(JsonCourseRepositoryTests, ReorderRejectsARepeatedNumber)
+{
+    m_repository->save(makeCourse(1));
+    m_repository->save(makeCourse(2));
+
+    EXPECT_THROW(m_repository->reorder({1, 1}), StorageError);
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{1, 2}));
+}
