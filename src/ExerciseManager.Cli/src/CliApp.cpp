@@ -23,7 +23,8 @@ enum class CoursesOption
     Add = 3,
     Update = 4,
     Delete = 5,
-    Exit = 6
+    Move = 6,
+    Exit = 7
 };
 
 constexpr int kCoursesOptionCount = static_cast<int>(CoursesOption::Exit);
@@ -309,6 +310,38 @@ void CliApp::updateCourse(const std::vector<Course>& courses)
         {
             m_courses.updateCourse(course.id, *name, *description, *fullDescription);
             m_console.writeLine("Course updated successfully. Name: " + *name);
+        });
+}
+
+void CliApp::moveCourse(const std::vector<Course>& courses)
+{
+    const std::optional<std::size_t> index = pickCourse(courses);
+    if (!index.has_value())
+    {
+        return;
+    }
+    const Course& course = courses[*index];
+
+    m_console.clearScreen();
+    m_console.writeLine(kLine);
+    m_console.writeLine("              Move course");
+    m_console.writeLine(kLine);
+    showCourseInfo(course);
+
+    // If the input ends in the middle, nothing is moved.
+    const std::optional<int> newPosition = ConsoleUtils::readNumber(
+        m_console, "Enter new position: ", 1, static_cast<int>(courses.size()));
+    if (!newPosition.has_value())
+    {
+        return;
+    }
+
+    runGuarded(
+        [&]()
+        {
+            // The real course number is used here, not the position in the list.
+            m_courses.moveCourse(course.id, *newPosition);
+            m_console.writeLine("Course moved successfully. Name: " + course.name);
         });
 }
 
@@ -828,7 +861,8 @@ void CliApp::runCoursesScreen()
         m_console.writeLine("[3] Add course");
         m_console.writeLine("[4] Update course");
         m_console.writeLine("[5] Delete course");
-        m_console.writeLine("[6] Exit");
+        m_console.writeLine("[6] Move course");
+        m_console.writeLine("[7] Exit");
         m_console.writeLine(kLine);
 
         const std::optional<int> choice = ConsoleUtils::readNumber(
@@ -862,6 +896,9 @@ void CliApp::runCoursesScreen()
             break;
         case CoursesOption::Delete:
             deleteCourse(courses);
+            break;
+        case CoursesOption::Move:
+            moveCourse(courses);
             break;
         case CoursesOption::Exit:
             return;
