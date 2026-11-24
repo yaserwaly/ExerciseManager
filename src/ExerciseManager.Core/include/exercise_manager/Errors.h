@@ -47,6 +47,13 @@ public:
     using ExerciseManagerError::ExerciseManagerError;
 };
 
+/// @brief Thrown when a position in a list is out of range.
+class InvalidPositionError : public ExerciseManagerError
+{
+  public:
+    using ExerciseManagerError::ExerciseManagerError;
+};
+
 /// @brief Thrown when a path or the workspace is invalid or unsafe.
 class WorkspaceError : public ExerciseManagerError
 {

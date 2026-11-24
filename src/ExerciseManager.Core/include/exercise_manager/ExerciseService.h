@@ -80,6 +80,22 @@ class ExerciseService
     /// @throws StorageError if the data cannot be read or written.
     void deleteExercise(int courseId, int exerciseNumber);
 
+    /// @brief Moves an exercise to another position in the list of its course.
+    ///
+    /// The stored order is the display order. The exercise is removed from its place and
+    /// inserted at the new position, and the other exercises shift. The exercise number,
+    /// the source files and the default exercise are not touched. If the exercise is
+    /// already at the new position, nothing is written.
+    /// @param courseId The course number.
+    /// @param exerciseNumber The real number of the exercise to move (not its position).
+    /// @param newPosition The new position in the list, from 1 to the number of exercises.
+    /// @throws CourseNotFoundError if the course does not exist.
+    /// @throws ExerciseNotFoundError if the course has no exercise with this number.
+    /// @throws InvalidPositionError if the new position is not between 1 and the number of
+    /// exercises.
+    /// @throws StorageError if the data cannot be read or written.
+    void moveExercise(int courseId, int exerciseNumber, int newPosition);
+
   private:
     ICourseRepository& m_repository;
     Workspace m_workspace;
