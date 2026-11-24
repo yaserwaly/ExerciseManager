@@ -37,8 +37,9 @@ enum class ExercisesOption
     Add = 3,
     Update = 4,
     Delete = 5,
-    BackToCourses = 6,
-    Exit = 7
+    Move = 6,
+    BackToCourses = 7,
+    Exit = 8
 };
 
 constexpr int kExercisesOptionCount = static_cast<int>(ExercisesOption::Exit);
@@ -570,6 +571,38 @@ void CliApp::updateExercise(const Course& course)
         });
 }
 
+void CliApp::moveExercise(const Course& course)
+{
+    const std::optional<std::size_t> index = pickExercise(course);
+    if (!index.has_value())
+    {
+        return;
+    }
+    const Exercise& exercise = course.exercises[*index];
+
+    m_console.clearScreen();
+    m_console.writeLine(kLine);
+    m_console.writeLine("             Move exercise");
+    m_console.writeLine(kLine);
+    showExerciseInfo(course.id, exercise);
+
+    // If the input ends in the middle, nothing is moved.
+    const std::optional<int> newPosition = ConsoleUtils::readNumber(
+        m_console, "Enter new position: ", 1, static_cast<int>(course.exercises.size()));
+    if (!newPosition.has_value())
+    {
+        return;
+    }
+
+    runGuarded(
+        [&]()
+        {
+            // The real exercise number is used here, not the position in the list.
+            m_exercises.moveExercise(course.id, exercise.number, *newPosition);
+            m_console.writeLine("Exercise moved successfully. Name: " + exercise.name);
+        });
+}
+
 void CliApp::openExercise(const Course& course)
 {
     const std::optional<std::size_t> index = pickExercise(course);
@@ -790,8 +823,9 @@ CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
         m_console.writeLine("[3] Add exercise");
         m_console.writeLine("[4] Update exercise");
         m_console.writeLine("[5] Delete exercise");
-        m_console.writeLine("[6] Back to courses");
-        m_console.writeLine("[7] Exit");
+        m_console.writeLine("[6] Move exercise");
+        m_console.writeLine("[7] Back to courses");
+        m_console.writeLine("[8] Exit");
         m_console.writeLine(kLine);
 
         const std::optional<int> choice = ConsoleUtils::readNumber(
@@ -818,6 +852,9 @@ CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
             break;
         case ExercisesOption::Delete:
             deleteExercise(course);
+            break;
+        case ExercisesOption::Move:
+            moveExercise(course);
             break;
         case ExercisesOption::BackToCourses:
             return CourseScreenResult::BackToCourses;

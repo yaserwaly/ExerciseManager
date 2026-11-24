@@ -598,7 +598,7 @@ TEST_F(CliAppTests, SetDefaultCourseShowsTheCurrentDefaultAndResetRemovesIt)
     m_courses->addCourse("first", "a", "b");
     m_defaults->saveDefaultCourse(1);
     // The program starts in the default course, so "6" goes back to the courses screen first.
-    FakeConsole console{"6", "2", "2", "", "7"};
+    FakeConsole console{"7", "2", "2", "", "7"};
 
     runApp(console);
 
@@ -672,7 +672,7 @@ TEST_F(CliAppTests, ResettingTheDefaultCourseKeepsTheDefaultExerciseOfThatCourse
     m_defaults->saveDefaultExercise(1, 1);
     // The program starts in the default course and opens its default exercise ("n"), then
     // "6" goes back to the courses screen.
-    FakeConsole console{"n", "6", "2", "2", "", "7"};
+    FakeConsole console{"n", "7", "2", "2", "", "7"};
 
     runApp(console);
 
@@ -697,7 +697,7 @@ TEST_F(CliAppTests, OpenCourseShowsTheCourseInfoAndItsExercises)
     m_courses->addCourse("C++ Basics", "Basics", "Basics in full");
     m_exercises->addExercise(1, "adder", "Adds", "Adds numbers");
     m_exercises->addExercise(1, "sum", "Sums", "Sums numbers");
-    FakeConsole console{"1", "1", "6", "7"};
+    FakeConsole console{"1", "1", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -720,7 +720,7 @@ TEST_F(CliAppTests, ExercisesAreShownInCreationOrderAndNeverShowTheRealNumbers)
     m_exercises->deleteExercise(1, 1);
     m_exercises->deleteExercise(1, 3);
     m_exercises->addExercise(1, "e", "ed", "x"); // takes the free number 1, stored last
-    FakeConsole console{"1", "1", "6", "7"};
+    FakeConsole console{"1", "1", "7", "7"};
 
     runApp(console);
 
@@ -735,7 +735,7 @@ TEST_F(CliAppTests, ExercisesAreShownInCreationOrderAndNeverShowTheRealNumbers)
 TEST_F(CliAppTests, CourseScreenShowsTheMenuOptions)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "6", "7"};
+    FakeConsole console{"1", "1", "7", "7"};
 
     runApp(console);
 
@@ -744,14 +744,15 @@ TEST_F(CliAppTests, CourseScreenShowsTheMenuOptions)
     EXPECT_TRUE(contains(console.output(), "[3] Add exercise\n"));
     EXPECT_TRUE(contains(console.output(), "[4] Update exercise\n"));
     EXPECT_TRUE(contains(console.output(), "[5] Delete exercise\n"));
-    EXPECT_TRUE(contains(console.output(), "[6] Back to courses\n"));
-    EXPECT_TRUE(contains(console.output(), "[7] Exit\n"));
+    EXPECT_TRUE(contains(console.output(), "[6] Move exercise\n"));
+    EXPECT_TRUE(contains(console.output(), "[7] Back to courses\n"));
+    EXPECT_TRUE(contains(console.output(), "[8] Exit\n"));
 }
 
 TEST_F(CliAppTests, CourseScreenShowsAMessageWhenThereAreNoExercises)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "6", "7"};
+    FakeConsole console{"1", "1", "7", "7"};
 
     runApp(console);
 
@@ -761,7 +762,7 @@ TEST_F(CliAppTests, CourseScreenShowsAMessageWhenThereAreNoExercises)
 TEST_F(CliAppTests, BackReturnsToTheCoursesScreen)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "6", "7"};
+    FakeConsole console{"1", "1", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -772,7 +773,7 @@ TEST_F(CliAppTests, BackReturnsToTheCoursesScreen)
 TEST_F(CliAppTests, ExitFromTheCourseScreenEndsTheProgram)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "7"};
+    FakeConsole console{"1", "1", "8"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -792,7 +793,7 @@ TEST_F(CliAppTests, OpenCourseWithNoCoursesShowsAMessage)
 TEST_F(CliAppTests, OpenCourseAsksAgainWhenTheNumberIsNotInTheList)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "2", "1", "6", "7"};
+    FakeConsole console{"1", "2", "1", "7", "7"};
 
     runApp(console);
 
@@ -814,12 +815,12 @@ TEST_F(CliAppTests, CourseScreenEndsTheProgramWhenTheInputEnds)
 TEST_F(CliAppTests, CourseScreenAsksAgainWhenTheOptionIsNotValid)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "9", "6", "7"};
+    FakeConsole console{"1", "1", "9", "7", "7"};
 
     runApp(console);
 
     EXPECT_TRUE(
-        contains(console.output(), "Invalid input. Please enter a number between 1 and 7.\n"));
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 8.\n"));
 }
 
 // ---------- add exercise ----------
@@ -827,7 +828,7 @@ TEST_F(CliAppTests, CourseScreenAsksAgainWhenTheOptionIsNotValid)
 TEST_F(CliAppTests, AddExerciseCreatesTheExerciseAndItsFiles)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "3", "adder", "Adds", "Adds numbers", "", "6", "7"};
+    FakeConsole console{"1", "1", "3", "adder", "Adds", "Adds numbers", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -851,7 +852,7 @@ TEST_F(CliAppTests, AddExerciseTakesTheFirstFreeRealNumber)
     m_exercises->addExercise(1, "b", "bd", "x"); // real number 2
     m_exercises->addExercise(1, "c", "cd", "x"); // real number 3
     m_exercises->deleteExercise(1, 2);
-    FakeConsole console{"1", "1", "3", "d", "dd", "x", "", "6", "7"};
+    FakeConsole console{"1", "1", "3", "d", "dd", "x", "", "7", "7"};
 
     runApp(console);
 
@@ -871,7 +872,7 @@ TEST_F(CliAppTests, AddExerciseAddsItToTheOpenedCourseOnly)
     m_courses->addCourse("first", "a", "b");
     m_courses->addCourse("second", "c", "d");
     // The second course is shown (and typed) as 2.
-    FakeConsole console{"1", "2", "3", "adder", "Adds", "full", "", "6", "7"};
+    FakeConsole console{"1", "2", "3", "adder", "Adds", "full", "", "7", "7"};
 
     runApp(console);
 
@@ -883,7 +884,7 @@ TEST_F(CliAppTests, AddExerciseAddsItToTheOpenedCourseOnly)
 TEST_F(CliAppTests, AddExerciseShowsTheErrorForAnInvalidName)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "3", "bad/name", "short", "full", "", "6", "7"};
+    FakeConsole console{"1", "1", "3", "bad/name", "short", "full", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -897,7 +898,7 @@ TEST_F(CliAppTests, AddExerciseShowsTheErrorForADuplicateName)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "same", "a", "b");
-    FakeConsole console{"1", "1", "3", "same", "x", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "3", "same", "x", "y", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -920,7 +921,7 @@ TEST_F(CliAppTests, AddExerciseAddsNothingWhenTheInputEndsInTheMiddle)
 TEST_F(CliAppTests, DeleteExerciseWithNoExercisesShowsAMessage)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "5", "", "6", "7"};
+    FakeConsole console{"1", "1", "5", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -931,7 +932,7 @@ TEST_F(CliAppTests, DeleteExerciseRemovesTheExerciseAndItsFiles)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
-    FakeConsole console{"1", "1", "5", "1", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "5", "1", "y", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -951,7 +952,7 @@ TEST_F(CliAppTests, DeleteExerciseUsesTheRealExerciseNumberNotThePosition)
     m_exercises->deleteExercise(1, 1);
     m_exercises->deleteExercise(1, 3);
     // The list shows b as 1 and d as 2. Typing 2 deletes d, whose real number is 4.
-    FakeConsole console{"1", "1", "5", "2", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "5", "2", "y", "", "7", "7"};
 
     runApp(console);
 
@@ -968,7 +969,7 @@ TEST_F(CliAppTests, DeleteExerciseCancelledKeepsTheExerciseAndItsFiles)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
-    FakeConsole console{"1", "1", "5", "1", "n", "", "6", "7"};
+    FakeConsole console{"1", "1", "5", "1", "n", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -981,7 +982,7 @@ TEST_F(CliAppTests, DeleteExerciseAsksAgainWhenTheNumberIsNotInTheList)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
-    FakeConsole console{"1", "1", "5", "2", "1", "n", "", "6", "7"};
+    FakeConsole console{"1", "1", "5", "2", "1", "n", "", "7", "7"};
 
     runApp(console);
 
@@ -997,7 +998,7 @@ TEST_F(CliAppTests, DeleteExerciseShowsTheRealClassNameAndFilePathsBeforeAsking)
     m_exercises->addExercise(1, "b", "Adds", "Adds numbers"); // real number 2
     m_exercises->deleteExercise(1, 1);
     // b is shown as 1, but its real number is 2.
-    FakeConsole console{"1", "1", "5", "1", "n", "", "6", "7"};
+    FakeConsole console{"1", "1", "5", "1", "n", "", "7", "7"};
 
     runApp(console);
 
@@ -1021,7 +1022,7 @@ TEST_F(CliAppTests, DeleteExerciseClearsItsDefaultExercise)
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_defaults->saveDefaultExercise(1, 1);
     // Arriving at the course opens its default exercise first, so the first answer is "n".
-    FakeConsole console{"1", "1", "n", "5", "1", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "n", "5", "1", "y", "", "7", "7"};
 
     runApp(console);
 
@@ -1044,7 +1045,7 @@ TEST_F(CliAppTests, DeleteExerciseDoesNothingWhenTheInputEndsAtTheQuestion)
 TEST_F(CliAppTests, UpdateExerciseWithNoExercisesShowsAMessage)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "4", "", "6", "7"};
+    FakeConsole console{"1", "1", "4", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1055,7 +1056,7 @@ TEST_F(CliAppTests, UpdateExerciseChangesAllFields)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "old", "old short", "old full");
-    FakeConsole console{"1", "1", "4", "1", "new", "new short", "new full", "", "6", "7"};
+    FakeConsole console{"1", "1", "4", "1", "new", "new short", "new full", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1072,7 +1073,7 @@ TEST_F(CliAppTests, UpdateExerciseKeepsEveryValueWhenEnterIsPressed)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "old", "old short", "old full");
-    FakeConsole console{"1", "1", "4", "1", "", "", "", "", "6", "7"};
+    FakeConsole console{"1", "1", "4", "1", "", "", "", "", "7", "7"};
 
     runApp(console);
 
@@ -1087,7 +1088,7 @@ TEST_F(CliAppTests, UpdateExerciseChangesOnlyTheTypedField)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "old", "old short", "old full");
-    FakeConsole console{"1", "1", "4", "1", "", "new short", "", "", "6", "7"};
+    FakeConsole console{"1", "1", "4", "1", "", "new short", "", "", "7", "7"};
 
     runApp(console);
 
@@ -1108,7 +1109,7 @@ TEST_F(CliAppTests, UpdateExerciseUsesTheRealExerciseNumberNotThePosition)
     m_exercises->deleteExercise(1, 1);
     m_exercises->deleteExercise(1, 3);
     // The list shows b as 1 and d as 2. Typing 2 updates d, whose real number is 4.
-    FakeConsole console{"1", "1", "4", "2", "renamed", "", "", "", "6", "7"};
+    FakeConsole console{"1", "1", "4", "2", "renamed", "", "", "", "7", "7"};
 
     runApp(console);
 
@@ -1133,7 +1134,7 @@ TEST_F(CliAppTests, UpdateExerciseShowsTheCurrentValuesInThePrompts)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "old", "old short", "old full");
-    FakeConsole console{"1", "1", "4", "1", "", "", "", "", "6", "7"};
+    FakeConsole console{"1", "1", "4", "1", "", "", "", "", "7", "7"};
 
     runApp(console);
 
@@ -1147,7 +1148,7 @@ TEST_F(CliAppTests, UpdateExerciseShowsTheExerciseInfoFirst)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "old", "old short", "old full");
-    FakeConsole console{"1", "1", "4", "1", "", "", "", "", "6", "7"};
+    FakeConsole console{"1", "1", "4", "1", "", "", "", "", "7", "7"};
 
     runApp(console);
 
@@ -1159,7 +1160,7 @@ TEST_F(CliAppTests, UpdateExerciseShowsTheErrorForAnInvalidName)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "old", "old short", "old full");
-    FakeConsole console{"1", "1", "4", "1", "bad/name", "", "", "", "6", "7"};
+    FakeConsole console{"1", "1", "4", "1", "bad/name", "", "", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1173,7 +1174,7 @@ TEST_F(CliAppTests, UpdateExerciseShowsTheErrorForTheNameOfAnotherExercise)
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "a", "ad", "x");
     m_exercises->addExercise(1, "b", "bd", "x");
-    FakeConsole console{"1", "1", "4", "2", "a", "", "", "", "6", "7"};
+    FakeConsole console{"1", "1", "4", "2", "a", "", "", "", "7", "7"};
 
     runApp(console);
 
@@ -1192,12 +1193,155 @@ TEST_F(CliAppTests, UpdateExerciseChangesNothingWhenTheInputEndsInTheMiddle)
     EXPECT_EQ(m_repository->load(1).exercises[0].name, "old");
 }
 
+// ---------- move exercise ----------
+
+TEST_F(CliAppTests, MoveExerciseWithNoExercisesShowsAMessage)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "6", "", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(contains(console.output(), "There are no exercises.\n"));
+}
+
+TEST_F(CliAppTests, MoveExerciseMovesTheExerciseAndSavesTheOrder)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");
+    m_exercises->addExercise(1, "b", "bd", "x");
+    m_exercises->addExercise(1, "c", "cd", "x");
+    FakeConsole console{"1", "1", "6", "3", "1", "", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 3u);
+    EXPECT_EQ(exercises[0].name, "c");
+    EXPECT_EQ(exercises[1].name, "a");
+    EXPECT_EQ(exercises[2].name, "b");
+    EXPECT_TRUE(contains(console.output(), "Exercise moved successfully. Name: c\n"));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, MoveExerciseShowsTheNewOrderInTheList)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");
+    m_exercises->addExercise(1, "b", "bd", "x");
+    m_exercises->addExercise(1, "c", "cd", "x");
+    FakeConsole console{"1", "1", "6", "1", "3", "", "7", "7"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "[1] b -- bd\n[2] c -- cd\n[3] a -- ad\n"));
+}
+
+TEST_F(CliAppTests, MoveExerciseUsesTheRealExerciseNumberNotThePosition)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x"); // real number 1
+    m_exercises->addExercise(1, "b", "bd", "x"); // real number 2
+    m_exercises->addExercise(1, "c", "cd", "x"); // real number 3
+    m_exercises->addExercise(1, "d", "dd", "x"); // real number 4
+    m_exercises->deleteExercise(1, 1);
+    m_exercises->deleteExercise(1, 3);
+    m_exercises->addExercise(1, "e", "ed", "x"); // takes the free number 1, stored last
+    // The list shows b, d, e. Typing 3 picks e, whose real number is 1.
+    FakeConsole console{"1", "1", "6", "3", "1", "", "7", "7"};
+
+    runApp(console);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 3u);
+    EXPECT_EQ(exercises[0].name, "e");
+    EXPECT_EQ(exercises[0].number, 1);
+    EXPECT_EQ(exercises[1].name, "b");
+    EXPECT_EQ(exercises[2].name, "d");
+    EXPECT_TRUE(contains(console.output(), "Exercise moved successfully. Name: e\n"));
+}
+
+TEST_F(CliAppTests, MoveExerciseAsksAgainWhenThePositionIsNotInTheList)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");
+    m_exercises->addExercise(1, "b", "bd", "x");
+    FakeConsole console{"1", "1", "6", "1", "3", "2", "", "7", "7"};
+
+    runApp(console);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 2.\n"));
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 2u);
+    EXPECT_EQ(exercises[0].name, "b");
+    EXPECT_EQ(exercises[1].name, "a");
+}
+
+TEST_F(CliAppTests, MoveExerciseToItsOwnPositionChangesNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");
+    m_exercises->addExercise(1, "b", "bd", "x");
+    FakeConsole console{"1", "1", "6", "2", "2", "", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 2u);
+    EXPECT_EQ(exercises[0].name, "a");
+    EXPECT_EQ(exercises[1].name, "b");
+}
+
+TEST_F(CliAppTests, MoveExerciseMovesNothingWhenTheInputEndsAtThePosition)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");
+    m_exercises->addExercise(1, "b", "bd", "x");
+    FakeConsole console{"1", "1", "6", "1"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 2u);
+    EXPECT_EQ(exercises[0].name, "a");
+    EXPECT_EQ(exercises[1].name, "b");
+}
+
+TEST_F(CliAppTests, MoveExerciseKeepsNumbersFilesAndTheDefaultExercise)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");
+    m_exercises->addExercise(1, "b", "bd", "x");
+    m_exercises->addExercise(1, "c", "cd", "x");
+    m_defaults->saveDefaultExercise(1, 3);
+    // Arriving at the course opens its default exercise first, so the first answer is "n".
+    FakeConsole console{"1", "1", "n", "6", "3", "1", "", "7", "7"};
+
+    runApp(console);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 3u);
+    EXPECT_EQ(exercises[0].name, "c");
+    EXPECT_EQ(exercises[0].number, 3);
+    EXPECT_EQ(exercises[1].number, 1);
+    EXPECT_EQ(exercises[2].number, 2);
+    for (int number = 1; number <= 3; ++number)
+    {
+        EXPECT_TRUE(
+            fs::is_regular_file(m_workspace->courseDir(1) / FileNaming::headerFileName(1, number)));
+        EXPECT_TRUE(
+            fs::is_regular_file(m_workspace->courseDir(1) / FileNaming::sourceFileName(1, number)));
+    }
+    EXPECT_EQ(m_defaults->loadDefaultExercise(1), 3);
+}
+
 // ---------- open exercise ----------
 
 TEST_F(CliAppTests, OpenExerciseWithNoExercisesShowsAMessage)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "1", "", "6", "7"};
+    FakeConsole console{"1", "1", "1", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1209,7 +1353,7 @@ TEST_F(CliAppTests, OpenExerciseShowsTheInfoAndDoesNotRunWhenTheAnswerIsNo)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "Adds numbers");
-    FakeConsole console{"1", "1", "1", "1", "n", "6", "7"};
+    FakeConsole console{"1", "1", "1", "1", "n", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1231,7 +1375,7 @@ TEST_F(CliAppTests, OpenExerciseRunsTheExerciseWithItsRealNumber)
     m_exercises->deleteExercise(1, 1);
     m_exercises->deleteExercise(1, 3);
     // The list shows b as 1 and d as 2. Typing 2 runs d, whose real number is 4.
-    FakeConsole console{"1", "1", "1", "2", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "1", "2", "y", "", "7", "7"};
 
     runApp(console);
 
@@ -1248,7 +1392,7 @@ TEST_F(CliAppTests, OpenExerciseRunsAReusedNumberThatIsListedLast)
     m_exercises->deleteExercise(1, 1);
     m_exercises->addExercise(1, "c", "cd", "x"); // takes the free number 1, stored last
     // The list shows b as 1 and c as 2. Typing 2 runs c, whose real number is 1.
-    FakeConsole console{"1", "1", "1", "2", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "1", "2", "y", "", "7", "7"};
 
     runApp(console);
 
@@ -1262,7 +1406,7 @@ TEST_F(CliAppTests, OpenExerciseShowsTheExitCodeAndAsksForEnterOnce)
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_runner.exitCode = 3;
-    FakeConsole console{"1", "1", "1", "1", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "1", "1", "y", "", "7", "7"};
 
     runApp(console);
 
@@ -1276,7 +1420,7 @@ TEST_F(CliAppTests, OpenExerciseShowsTheBuildErrorAndGoesBackToTheList)
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_runner.errorMessage = "Build failed:\nerror C2065: x";
-    FakeConsole console{"1", "1", "1", "1", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "1", "1", "y", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1289,7 +1433,7 @@ TEST_F(CliAppTests, AfterRunningTheExercisesListIsShownAgainAndTheExerciseIsNotR
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
-    FakeConsole console{"1", "1", "1", "1", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "1", "1", "y", "", "7", "7"};
 
     runApp(console);
 
@@ -1302,7 +1446,7 @@ TEST_F(CliAppTests, OpenExerciseAsksAgainWhenTheNumberIsNotInTheList)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
-    FakeConsole console{"1", "1", "1", "2", "1", "n", "6", "7"};
+    FakeConsole console{"1", "1", "1", "2", "1", "n", "7", "7"};
 
     runApp(console);
 
@@ -1314,7 +1458,7 @@ TEST_F(CliAppTests, OpenExerciseAsksAgainWhenTheAnswerIsNotYesOrNo)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
-    FakeConsole console{"1", "1", "1", "1", "maybe", "n", "6", "7"};
+    FakeConsole console{"1", "1", "1", "1", "maybe", "n", "7", "7"};
 
     runApp(console);
 
@@ -1345,7 +1489,7 @@ TEST_F(CliAppTests, SetDefaultExerciseSavesTheRealExerciseNumberNotThePosition)
     m_exercises->deleteExercise(1, 1);
     m_exercises->deleteExercise(1, 3);
     // The list shows b as 1 and d as 2. Typing 2 chooses d, whose real number is 4.
-    FakeConsole console{"1", "1", "2", "1", "2", "", "6", "7"};
+    FakeConsole console{"1", "1", "2", "1", "2", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1360,7 +1504,7 @@ TEST_F(CliAppTests, SetDefaultExerciseShowsTheCurrentDefaultAndResetRemovesIt)
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_defaults->saveDefaultExercise(1, 1);
     // Arriving at the course opens its default exercise first, so the first answer is "n".
-    FakeConsole console{"1", "1", "n", "2", "2", "", "6", "7"};
+    FakeConsole console{"1", "1", "n", "2", "2", "", "7", "7"};
 
     runApp(console);
 
@@ -1372,7 +1516,7 @@ TEST_F(CliAppTests, SetDefaultExerciseShowsTheCurrentDefaultAndResetRemovesIt)
 TEST_F(CliAppTests, SetDefaultExerciseShowsWhenThereIsNoDefault)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "2", "2", "", "6", "7"};
+    FakeConsole console{"1", "1", "2", "2", "", "7", "7"};
 
     runApp(console);
 
@@ -1384,7 +1528,7 @@ TEST_F(CliAppTests, SetDefaultExerciseShowsWhenTheDefaultDoesNotExist)
     m_courses->addCourse("first", "a", "b");
     m_defaults->saveDefaultExercise(1, 5);
     // Arriving at the course offers a reset first, so the first answer is "n".
-    FakeConsole console{"1", "1", "n", "2", "2", "", "6", "7"};
+    FakeConsole console{"1", "1", "n", "2", "2", "", "7", "7"};
 
     runApp(console);
 
@@ -1400,7 +1544,7 @@ TEST_F(CliAppTests, SetDefaultExerciseCanFixAnUnreadableDefaultFile)
     m_exercises->addExercise(1, "adder", "Adds", "full");
     std::ofstream(m_workspace->defaultExerciseFile(1), std::ios::binary) << "this is not json";
     // Arriving at the course offers to reset the damaged file first, so the first answer is "n".
-    FakeConsole console{"1", "1", "n", "2", "1", "1", "", "6", "7"};
+    FakeConsole console{"1", "1", "n", "2", "1", "1", "", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1412,7 +1556,7 @@ TEST_F(CliAppTests, SetDefaultExerciseCanFixAnUnreadableDefaultFile)
 TEST_F(CliAppTests, SetDefaultExerciseWithNoExercisesShowsAMessage)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "2", "1", "", "6", "7"};
+    FakeConsole console{"1", "1", "2", "1", "", "7", "7"};
 
     runApp(console);
 
@@ -1423,7 +1567,7 @@ TEST_F(CliAppTests, SetDefaultExerciseWithNoExercisesShowsAMessage)
 TEST_F(CliAppTests, SetDefaultExerciseAsksAgainWhenTheOptionIsNotValid)
 {
     m_courses->addCourse("first", "a", "b");
-    FakeConsole console{"1", "1", "2", "3", "2", "", "6", "7"};
+    FakeConsole console{"1", "1", "2", "3", "2", "", "7", "7"};
 
     runApp(console);
 
@@ -1437,7 +1581,7 @@ TEST_F(CliAppTests, EachCourseHasItsOwnDefaultExercise)
     m_courses->addCourse("second", "c", "d");
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_exercises->addExercise(2, "sum", "Sums", "full");
-    FakeConsole console{"1", "1", "2", "1", "1", "", "6", "7"};
+    FakeConsole console{"1", "1", "2", "1", "1", "", "7", "7"};
 
     runApp(console);
 
@@ -1463,7 +1607,7 @@ TEST_F(CliAppTests, ArrivingAtACourseOpensItsDefaultExerciseBeforeTheList)
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_defaults->saveDefaultExercise(1, 1);
-    FakeConsole console{"1", "1", "n", "6", "7"};
+    FakeConsole console{"1", "1", "n", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1480,7 +1624,7 @@ TEST_F(CliAppTests, TheDefaultExerciseRunsAndThenTheListIsShownWithoutReopeningI
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_defaults->saveDefaultExercise(1, 1);
-    FakeConsole console{"1", "1", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "y", "", "7", "7"};
 
     runApp(console);
 
@@ -1497,7 +1641,7 @@ TEST_F(CliAppTests, RefreshingTheListDoesNotOpenTheDefaultExerciseAgain)
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_defaults->saveDefaultExercise(1, 1);
-    FakeConsole console{"1", "1", "n", "3", "second", "s", "f", "", "6", "7"};
+    FakeConsole console{"1", "1", "n", "3", "second", "s", "f", "", "7", "7"};
 
     runApp(console);
 
@@ -1510,7 +1654,7 @@ TEST_F(CliAppTests, OpeningTheCourseAgainChecksTheDefaultExerciseAgain)
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_defaults->saveDefaultExercise(1, 1);
-    FakeConsole console{"1", "1", "n", "6", "1", "1", "n", "6", "7"};
+    FakeConsole console{"1", "1", "n", "7", "1", "1", "n", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1523,7 +1667,7 @@ TEST_F(CliAppTests, TheDefaultExerciseOfAnotherCourseIsNotOpened)
     m_courses->addCourse("second", "c", "d");
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_defaults->saveDefaultExercise(1, 1);
-    FakeConsole console{"1", "2", "6", "7"};
+    FakeConsole console{"1", "2", "7", "7"};
 
     runApp(console);
 
@@ -1535,7 +1679,7 @@ TEST_F(CliAppTests, WithoutADefaultExerciseTheListIsShownDirectly)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
-    FakeConsole console{"1", "1", "6", "7"};
+    FakeConsole console{"1", "1", "7", "7"};
 
     runApp(console);
 
@@ -1547,7 +1691,7 @@ TEST_F(CliAppTests, ADefaultExerciseThatDoesNotExistOffersAResetAndYesRemovesIt)
 {
     m_courses->addCourse("first", "a", "b");
     m_defaults->saveDefaultExercise(1, 5);
-    FakeConsole console{"1", "1", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "y", "", "7", "7"};
 
     runApp(console);
 
@@ -1563,7 +1707,7 @@ TEST_F(CliAppTests, ADefaultExerciseThatDoesNotExistKeepsItWhenTheAnswerIsNo)
 {
     m_courses->addCourse("first", "a", "b");
     m_defaults->saveDefaultExercise(1, 5);
-    FakeConsole console{"1", "1", "n", "6", "7"};
+    FakeConsole console{"1", "1", "n", "7", "7"};
 
     runApp(console);
 
@@ -1576,7 +1720,7 @@ TEST_F(CliAppTests, AnUnreadableDefaultExerciseFileOffersAReset)
 {
     m_courses->addCourse("first", "a", "b");
     std::ofstream(m_workspace->defaultExerciseFile(1), std::ios::binary) << "this is not json";
-    FakeConsole console{"1", "1", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "y", "", "7", "7"};
 
     runApp(console);
 
@@ -1601,7 +1745,7 @@ TEST_F(CliAppTests, TheDefaultCourseOpensAtTheStartBeforeTheCoursesScreen)
 {
     m_courses->addCourse("first", "a", "b");
     m_defaults->saveDefaultCourse(1);
-    FakeConsole console{"6", "7"};
+    FakeConsole console{"7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1615,7 +1759,7 @@ TEST_F(CliAppTests, ExitFromTheDefaultCourseEndsTheProgramWithoutTheCoursesScree
 {
     m_courses->addCourse("first", "a", "b");
     m_defaults->saveDefaultCourse(1);
-    FakeConsole console{"7"};
+    FakeConsole console{"8"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1628,7 +1772,7 @@ TEST_F(CliAppTests, TheDefaultCourseOpensItsDefaultExerciseAtTheStart)
     m_exercises->addExercise(1, "adder", "Adds", "full");
     m_defaults->saveDefaultCourse(1);
     m_defaults->saveDefaultExercise(1, 1);
-    FakeConsole console{"n", "6", "7"};
+    FakeConsole console{"n", "7", "7"};
 
     EXPECT_EQ(runApp(console), 0);
 
@@ -1639,7 +1783,7 @@ TEST_F(CliAppTests, BackFromTheDefaultCourseShowsTheCoursesScreenAndDoesNotReope
 {
     m_courses->addCourse("first", "a", "b");
     m_defaults->saveDefaultCourse(1);
-    FakeConsole console{"6", "7"};
+    FakeConsole console{"7", "7"};
 
     runApp(console);
 
@@ -1736,7 +1880,7 @@ TEST_F(CliAppTests, TheBuildingMessageIsFollowedByAnEmptyLine)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "adder", "Adds", "full");
-    FakeConsole console{"1", "1", "1", "1", "y", "", "6", "7"};
+    FakeConsole console{"1", "1", "1", "1", "y", "", "7", "7"};
 
     runApp(console);
 
