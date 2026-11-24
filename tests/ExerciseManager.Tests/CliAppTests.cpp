@@ -619,7 +619,7 @@ TEST_F(CliAppTests, OpenCourseShowsTheCourseInfoAndItsExercises)
     EXPECT_TRUE(contains(console.output(), "[2] sum -- Sums\n"));
 }
 
-TEST_F(CliAppTests, ExercisesAreNumberedFromOneToNAndNeverShowTheRealNumbers)
+TEST_F(CliAppTests, ExercisesAreShownInCreationOrderAndNeverShowTheRealNumbers)
 {
     m_courses->addCourse("first", "a", "b");
     m_exercises->addExercise(1, "a", "ad", "x"); // real number 1
@@ -633,9 +633,12 @@ TEST_F(CliAppTests, ExercisesAreNumberedFromOneToNAndNeverShowTheRealNumbers)
 
     runApp(console);
 
-    // Real numbers: e = 1, b = 2, d = 4. Shown as 1, 2, 3.
-    EXPECT_TRUE(contains(console.output(), "[1] e -- ed\n[2] b -- bd\n[3] d -- dd\n"));
-    EXPECT_FALSE(contains(console.output(), "[4] d"));
+    // Real numbers: b = 2, d = 4, e = 1. Shown in creation order as 1, 2, 3.
+    EXPECT_TRUE(contains(console.output(), "[1] b -- bd\n[2] d -- dd\n[3] e -- ed\n"));
+    // There are only three exercises, so no exercise line is numbered 4.
+    EXPECT_FALSE(contains(console.output(), "[4] b -- "));
+    EXPECT_FALSE(contains(console.output(), "[4] d -- "));
+    EXPECT_FALSE(contains(console.output(), "[4] e -- "));
 }
 
 TEST_F(CliAppTests, CourseScreenShowsTheMenuOptions)
@@ -1144,6 +1147,23 @@ TEST_F(CliAppTests, OpenExerciseRunsTheExerciseWithItsRealNumber)
     ASSERT_EQ(m_runner.calls.size(), 1u);
     EXPECT_EQ(m_runner.calls[0].first, 1);
     EXPECT_EQ(m_runner.calls[0].second, 4);
+}
+
+TEST_F(CliAppTests, OpenExerciseRunsAReusedNumberThatIsListedLast)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x"); // real number 1
+    m_exercises->addExercise(1, "b", "bd", "x"); // real number 2
+    m_exercises->deleteExercise(1, 1);
+    m_exercises->addExercise(1, "c", "cd", "x"); // takes the free number 1, stored last
+    // The list shows b as 1 and c as 2. Typing 2 runs c, whose real number is 1.
+    FakeConsole console{"1", "1", "1", "2", "y", "", "6", "6"};
+
+    runApp(console);
+
+    ASSERT_EQ(m_runner.calls.size(), 1u);
+    EXPECT_EQ(m_runner.calls[0].first, 1);
+    EXPECT_EQ(m_runner.calls[0].second, 1);
 }
 
 TEST_F(CliAppTests, OpenExerciseShowsTheExitCodeAndAsksForEnterOnce)

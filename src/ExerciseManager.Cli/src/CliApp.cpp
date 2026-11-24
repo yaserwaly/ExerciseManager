@@ -736,9 +736,7 @@ CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
             ConsoleUtils::waitForEnter(m_console);
             return CourseScreenResult::BackToCourses;
         }
-        // The list is ordered by the real exercise number, but it is shown as 1..N.
-        std::sort(course.exercises.begin(), course.exercises.end(),
-                  [](const Exercise& a, const Exercise& b) { return a.number < b.number; });
+        // The exercises are shown in the order they are stored (the creation order), as 1..N.
 
         // Right after arriving at the course, its default exercise is checked once. Later
         // refreshes of the list (after an operation) never open it again.
