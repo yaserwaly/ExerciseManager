@@ -79,6 +79,9 @@ class CliApp
     // The "Update course" option: asks which course, then each field with its current value.
     void updateCourse(const std::vector<Course>& courses);
 
+    // The "Move course" option: asks which course and its new position, and moves it.
+    void moveCourse(const std::vector<Course>& courses);
+
     // The "Set default course" option: shows the current default, then chooses or resets it.
     void setDefaultCourse(const std::vector<Course>& courses);
 
@@ -104,6 +107,9 @@ class CliApp
 
     // The "Update exercise" option: asks which exercise, then each field with its current value.
     void updateExercise(const Course& course);
+
+    // The "Move exercise" option: asks which exercise and its new position, and moves it.
+    void moveExercise(const Course& course);
 
     // The "Open exercise" option: asks which exercise, shows its details and, if the user
     // agrees, builds and runs it.

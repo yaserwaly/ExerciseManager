@@ -72,7 +72,20 @@ class CourseService
     /// @throws StorageError if the stored data cannot be read or written.
     void deleteCourse(int courseId);
 
-    /// @brief Lists all courses, sorted by number.
+    /// @brief Moves a course to another position in the list of courses.
+    ///
+    /// The stored order is the display order. The course is removed from its place and
+    /// inserted at the new position, and the other courses shift. The course number, its
+    /// folder, its exercises and the defaults are not touched. If the course is already
+    /// at the new position, nothing is written.
+    /// @param courseId The real number of the course to move (not its position).
+    /// @param newPosition The new position in the list, from 1 to the number of courses.
+    /// @throws CourseNotFoundError if the course does not exist.
+    /// @throws InvalidPositionError if the new position is not between 1 and the number of courses.
+    /// @throws StorageError if the stored data cannot be read or written.
+    void moveCourse(int courseId, int newPosition);
+
+    /// @brief Lists all courses, in the order they are stored (the display order).
     /// @return The stored courses, each with its exercises.
     /// @throws StorageError if the stored data cannot be read or is invalid.
     std::vector<Course> listCourses() const;

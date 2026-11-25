@@ -23,7 +23,8 @@ enum class CoursesOption
     Add = 3,
     Update = 4,
     Delete = 5,
-    Exit = 6
+    Move = 6,
+    Exit = 7
 };
 
 constexpr int kCoursesOptionCount = static_cast<int>(CoursesOption::Exit);
@@ -36,8 +37,9 @@ enum class ExercisesOption
     Add = 3,
     Update = 4,
     Delete = 5,
-    BackToCourses = 6,
-    Exit = 7
+    Move = 6,
+    BackToCourses = 7,
+    Exit = 8
 };
 
 constexpr int kExercisesOptionCount = static_cast<int>(ExercisesOption::Exit);
@@ -312,6 +314,49 @@ void CliApp::updateCourse(const std::vector<Course>& courses)
         });
 }
 
+void CliApp::moveCourse(const std::vector<Course>& courses)
+{
+    const std::optional<std::size_t> index = pickCourse(courses);
+    if (!index.has_value())
+    {
+        return;
+    }
+    const Course& course = courses[*index];
+    const int currentPosition = static_cast<int>(*index) + 1;
+    const int count = static_cast<int>(courses.size());
+
+    m_console.clearScreen();
+    m_console.writeLine(kLine);
+    m_console.writeLine("              Move course");
+    m_console.writeLine(kLine);
+    showCourseInfo(course);
+    m_console.writeLine("Current position: " + std::to_string(currentPosition) + " of " +
+                        std::to_string(count));
+
+    // If the input ends in the middle, nothing is moved.
+    const std::optional<int> newPosition =
+        ConsoleUtils::readNumber(m_console, "Enter new position: ", 1, count);
+    if (!newPosition.has_value())
+    {
+        return;
+    }
+
+    runGuarded(
+        [&]()
+        {
+            if (*newPosition == currentPosition)
+            {
+                m_console.writeLine("The course is already at position " +
+                                    std::to_string(currentPosition) + ". Nothing changed.");
+                return;
+            }
+
+            // The real course number is used here, not the position in the list.
+            m_courses.moveCourse(course.id, *newPosition);
+            m_console.writeLine("Course moved successfully. Name: " + course.name);
+        });
+}
+
 void CliApp::setDefaultCourse(const std::vector<Course>& courses)
 {
     m_console.clearScreen();
@@ -537,6 +582,49 @@ void CliApp::updateExercise(const Course& course)
         });
 }
 
+void CliApp::moveExercise(const Course& course)
+{
+    const std::optional<std::size_t> index = pickExercise(course);
+    if (!index.has_value())
+    {
+        return;
+    }
+    const Exercise& exercise = course.exercises[*index];
+    const int currentPosition = static_cast<int>(*index) + 1;
+    const int count = static_cast<int>(course.exercises.size());
+
+    m_console.clearScreen();
+    m_console.writeLine(kLine);
+    m_console.writeLine("             Move exercise");
+    m_console.writeLine(kLine);
+    showExerciseInfo(course.id, exercise);
+    m_console.writeLine("Current position: " + std::to_string(currentPosition) + " of " +
+                        std::to_string(count));
+
+    // If the input ends in the middle, nothing is moved.
+    const std::optional<int> newPosition =
+        ConsoleUtils::readNumber(m_console, "Enter new position: ", 1, count);
+    if (!newPosition.has_value())
+    {
+        return;
+    }
+
+    runGuarded(
+        [&]()
+        {
+            if (*newPosition == currentPosition)
+            {
+                m_console.writeLine("The exercise is already at position " +
+                                    std::to_string(currentPosition) + ". Nothing changed.");
+                return;
+            }
+
+            // The real exercise number is used here, not the position in the list.
+            m_exercises.moveExercise(course.id, exercise.number, *newPosition);
+            m_console.writeLine("Exercise moved successfully. Name: " + exercise.name);
+        });
+}
+
 void CliApp::openExercise(const Course& course)
 {
     const std::optional<std::size_t> index = pickExercise(course);
@@ -736,9 +824,7 @@ CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
             ConsoleUtils::waitForEnter(m_console);
             return CourseScreenResult::BackToCourses;
         }
-        // The list is ordered by the real exercise number, but it is shown as 1..N.
-        std::sort(course.exercises.begin(), course.exercises.end(),
-                  [](const Exercise& a, const Exercise& b) { return a.number < b.number; });
+        // The exercises are shown in the order they are stored (the creation order), as 1..N.
 
         // Right after arriving at the course, its default exercise is checked once. Later
         // refreshes of the list (after an operation) never open it again.
@@ -759,8 +845,9 @@ CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
         m_console.writeLine("[3] Add exercise");
         m_console.writeLine("[4] Update exercise");
         m_console.writeLine("[5] Delete exercise");
-        m_console.writeLine("[6] Back to courses");
-        m_console.writeLine("[7] Exit");
+        m_console.writeLine("[6] Move exercise");
+        m_console.writeLine("[7] Back to courses");
+        m_console.writeLine("[8] Exit");
         m_console.writeLine(kLine);
 
         const std::optional<int> choice = ConsoleUtils::readNumber(
@@ -787,6 +874,9 @@ CliApp::CourseScreenResult CliApp::runCourseScreen(int courseId)
             break;
         case ExercisesOption::Delete:
             deleteExercise(course);
+            break;
+        case ExercisesOption::Move:
+            moveExercise(course);
             break;
         case ExercisesOption::BackToCourses:
             return CourseScreenResult::BackToCourses;
@@ -830,7 +920,8 @@ void CliApp::runCoursesScreen()
         m_console.writeLine("[3] Add course");
         m_console.writeLine("[4] Update course");
         m_console.writeLine("[5] Delete course");
-        m_console.writeLine("[6] Exit");
+        m_console.writeLine("[6] Move course");
+        m_console.writeLine("[7] Exit");
         m_console.writeLine(kLine);
 
         const std::optional<int> choice = ConsoleUtils::readNumber(
@@ -864,6 +955,9 @@ void CliApp::runCoursesScreen()
             break;
         case CoursesOption::Delete:
             deleteCourse(courses);
+            break;
+        case CoursesOption::Move:
+            moveCourse(courses);
             break;
         case CoursesOption::Exit:
             return;

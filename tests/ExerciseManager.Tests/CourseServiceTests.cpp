@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <algorithm>
 
 namespace fs = std::filesystem;
 
@@ -27,6 +28,8 @@ using exercise_manager::ICourseRepository;
 using exercise_manager::InvalidExerciseNameError;
 using exercise_manager::Workspace;
 using exercise_manager::DefaultsStore;
+using exercise_manager::InvalidPositionError;
+using exercise_manager::StorageError;
 
 namespace
 {
@@ -37,44 +40,89 @@ class FakeCourseRepository : public ICourseRepository
   public:
     Course load(int courseId) const override
     {
-        const auto it = m_courses.find(courseId);
+        const auto it = find(courseId);
         if (it == m_courses.end())
         {
             throw CourseNotFoundError("Course does not exist.");
         }
-        return it->second;
+        return *it;
     }
 
     void save(const Course& course) override
     {
-        m_courses[course.id] = course;
+        const auto it = find(course.id);
+        if (it != m_courses.end())
+        {
+            *it = course;
+        }
+        else
+        {
+            m_courses.push_back(course);
+        }
     }
 
     bool exists(int courseId) const override
     {
-        return m_courses.count(courseId) > 0;
+        return find(courseId) != m_courses.end();
     }
 
     void remove(int courseId) override
     {
-        if (m_courses.erase(courseId) == 0)
+        const auto it = find(courseId);
+        if (it == m_courses.end())
         {
             throw CourseNotFoundError("Course does not exist.");
         }
+        m_courses.erase(it);
     }
 
     std::vector<int> listCourseIds() const override
     {
         std::vector<int> ids;
-        for (const auto& entry : m_courses)
+        for (const Course& course : m_courses)
         {
-            ids.push_back(entry.first);
+            ids.push_back(course.id);
         }
         return ids;
     }
 
+        void reorder(const std::vector<int>& orderedIds) override
+    {
+        if (orderedIds.size() != m_courses.size())
+        {
+            throw StorageError("The new order does not match the stored courses.");
+        }
+
+        std::vector<Course> reordered;
+        for (const int id : orderedIds)
+        {
+            const auto stored = find(id);
+            const bool repeated =
+                std::any_of(reordered.begin(), reordered.end(),
+                            [id](const Course& course) { return course.id == id; });
+            if (stored == m_courses.end() || repeated)
+            {
+                throw StorageError("The new order does not match the stored courses.");
+            }
+            reordered.push_back(*stored);
+        }
+        m_courses = std::move(reordered);
+    }
+
   private:
-    std::map<int, Course> m_courses;
+    std::vector<Course>::iterator find(int courseId)
+    {
+        return std::find_if(m_courses.begin(), m_courses.end(),
+                            [courseId](const Course& course) { return course.id == courseId; });
+    }
+
+    std::vector<Course>::const_iterator find(int courseId) const
+    {
+        return std::find_if(m_courses.begin(), m_courses.end(),
+                            [courseId](const Course& course) { return course.id == courseId; });
+    }
+
+    std::vector<Course> m_courses;
 };
 
 Course makeCourse(int id, const std::string& name)
@@ -272,7 +320,7 @@ TEST_F(CourseServiceFixture, ListCoursesIsEmptyWhenThereAreNoCourses)
     EXPECT_TRUE(m_service->listCourses().empty());
 }
 
-TEST_F(CourseServiceFixture, ListCoursesReturnsAllCoursesSortedByNumber)
+TEST_F(CourseServiceFixture, ListCoursesReturnsCoursesInStorageOrder)
 {
     m_repository.save(makeCourse(3, "three"));
     m_repository.save(makeCourse(1, "one"));
@@ -280,10 +328,27 @@ TEST_F(CourseServiceFixture, ListCoursesReturnsAllCoursesSortedByNumber)
 
     const std::vector<Course> courses = m_service->listCourses();
     ASSERT_EQ(courses.size(), 3u);
-    EXPECT_EQ(courses[0].id, 1);
-    EXPECT_EQ(courses[1].id, 3);
+    EXPECT_EQ(courses[0].id, 3);
+    EXPECT_EQ(courses[1].id, 1);
     EXPECT_EQ(courses[2].id, 10);
     EXPECT_EQ(courses[2].name, "ten");
+}
+
+TEST_F(CourseServiceFixture, ANewCourseThatReusesAFreeNumberIsListedLast)
+{
+    m_service->addCourse("first", "", "");  // number 1
+    m_service->addCourse("second", "", ""); // number 2
+    m_service->addCourse("third", "", "");  // number 3
+    m_service->deleteCourse(1);
+
+    EXPECT_EQ(m_service->addCourse("fourth", "", ""), 1);
+
+    const std::vector<Course> courses = m_service->listCourses();
+    ASSERT_EQ(courses.size(), 3u);
+    EXPECT_EQ(courses[0].id, 2);
+    EXPECT_EQ(courses[1].id, 3);
+    EXPECT_EQ(courses[2].id, 1);
+    EXPECT_EQ(courses[2].name, "fourth");
 }
 
 // ---------- deleteCourse ----------
@@ -386,4 +451,106 @@ TEST_F(CourseServiceFixture, DeleteCourseWorksWhenDefaultFileIsCorrupt)
 
     EXPECT_NO_THROW(m_service->deleteCourse(1));
     EXPECT_FALSE(m_repository.exists(1));
+}
+
+// ---------- moveCourse ----------
+
+TEST_F(CourseServiceFixture, MoveCourseToTheFirstPosition)
+{
+    m_service->addCourse("a", "", "");
+    m_service->addCourse("b", "", "");
+    m_service->addCourse("c", "", "");
+    m_service->addCourse("d", "", "");
+
+    m_service->moveCourse(4, 1);
+
+    EXPECT_EQ(m_repository.listCourseIds(), (std::vector<int>{4, 1, 2, 3}));
+}
+
+TEST_F(CourseServiceFixture, MoveCourseToTheLastPosition)
+{
+    m_service->addCourse("a", "", "");
+    m_service->addCourse("b", "", "");
+    m_service->addCourse("c", "", "");
+    m_service->addCourse("d", "", "");
+
+    m_service->moveCourse(1, 4);
+
+    EXPECT_EQ(m_repository.listCourseIds(), (std::vector<int>{2, 3, 4, 1}));
+}
+
+TEST_F(CourseServiceFixture, MoveCourseToTheMiddle)
+{
+    m_service->addCourse("a", "", "");
+    m_service->addCourse("b", "", "");
+    m_service->addCourse("c", "", "");
+    m_service->addCourse("d", "", "");
+
+    m_service->moveCourse(4, 2);
+
+    EXPECT_EQ(m_repository.listCourseIds(), (std::vector<int>{1, 4, 2, 3}));
+}
+
+TEST_F(CourseServiceFixture, MoveCourseToItsOwnPositionChangesNothing)
+{
+    m_service->addCourse("a", "", "");
+    m_service->addCourse("b", "", "");
+    m_service->addCourse("c", "", "");
+
+    EXPECT_NO_THROW(m_service->moveCourse(2, 2));
+
+    EXPECT_EQ(m_repository.listCourseIds(), (std::vector<int>{1, 2, 3}));
+}
+
+TEST_F(CourseServiceFixture, MoveCourseRejectsPositionOutOfRange)
+{
+    m_service->addCourse("a", "", "");
+    m_service->addCourse("b", "", "");
+
+    EXPECT_THROW(m_service->moveCourse(1, 0), InvalidPositionError);
+    EXPECT_THROW(m_service->moveCourse(1, 3), InvalidPositionError);
+    EXPECT_THROW(m_service->moveCourse(1, -2), InvalidPositionError);
+    EXPECT_EQ(m_repository.listCourseIds(), (std::vector<int>{1, 2}));
+}
+
+TEST_F(CourseServiceFixture, MoveCourseThrowsForMissingCourse)
+{
+    m_service->addCourse("a", "", "");
+
+    EXPECT_THROW(m_service->moveCourse(5, 1), CourseNotFoundError);
+    EXPECT_EQ(m_repository.listCourseIds(), (std::vector<int>{1}));
+}
+
+TEST_F(CourseServiceFixture, MoveCourseUsesTheRealNumberNotThePosition)
+{
+    m_service->addCourse("first", "", "");  // number 1
+    m_service->addCourse("second", "", ""); // number 2
+    m_service->addCourse("third", "", "");  // number 3
+    m_service->deleteCourse(1);
+    m_service->addCourse("fourth", "", ""); // takes the free number 1, stored last: 2, 3, 1
+
+    // Number 1 is "fourth", which is at position 3. Moving it to position 1 must pick it.
+    m_service->moveCourse(1, 1);
+
+    EXPECT_EQ(m_repository.listCourseIds(), (std::vector<int>{1, 2, 3}));
+    EXPECT_EQ(m_repository.load(1).name, "fourth");
+}
+
+TEST_F(CourseServiceFixture, MoveCourseKeepsFoldersExercisesAndTheDefaultCourse)
+{
+    m_service->addCourse("a", "", "");
+    m_service->addCourse("b", "", "");
+    m_service->addCourse("c", "", "");
+    createCourseFolder(1);
+    Course first = m_repository.load(1);
+    first.exercises.push_back(Exercise{1, "adder", "a", "b"});
+    m_repository.save(first);
+    DefaultsStore(*m_workspace).saveDefaultCourse(3);
+
+    m_service->moveCourse(3, 1);
+
+    EXPECT_EQ(m_repository.listCourseIds(), (std::vector<int>{3, 1, 2}));
+    EXPECT_TRUE(fs::is_directory(m_workspace->courseDir(1)));
+    EXPECT_EQ(m_repository.load(1).exercises.size(), 1u);
+    EXPECT_EQ(DefaultsStore(*m_workspace).loadDefaultCourse(), 3);
 }

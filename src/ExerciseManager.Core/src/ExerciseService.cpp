@@ -8,6 +8,7 @@
 #include <vector>
 #include <filesystem>
 #include <system_error>
+#include <utility>
 
 namespace exercise_manager
 {
@@ -163,6 +164,37 @@ void ExerciseService::deleteExercise(int courseId, int exerciseNumber)
             throw WorkspaceError("Could not delete an exercise file.");
         }
     }
+}
+
+void ExerciseService::moveExercise(int courseId, int exerciseNumber, int newPosition)
+{
+    Course course = m_repository.load(courseId);
+
+    const auto target = std::find_if(course.exercises.begin(), course.exercises.end(),
+                                     [exerciseNumber](const Exercise& exercise)
+                                     { return exercise.number == exerciseNumber; });
+    if (target == course.exercises.end())
+    {
+        throw ExerciseNotFoundError("Exercise does not exist in this course.");
+    }
+
+    const int count = static_cast<int>(course.exercises.size());
+    if (newPosition < 1 || newPosition > count)
+    {
+        throw InvalidPositionError("The new position is out of range.");
+    }
+
+    const int currentIndex = static_cast<int>(target - course.exercises.begin());
+    const int newIndex = newPosition - 1;
+    if (currentIndex == newIndex)
+    {
+        return; // already there: nothing to write
+    }
+
+    Exercise moved = std::move(*target);
+    course.exercises.erase(target);
+    course.exercises.insert(course.exercises.begin() + newIndex, std::move(moved));
+    m_repository.save(course);
 }
 
 } // namespace exercise_manager

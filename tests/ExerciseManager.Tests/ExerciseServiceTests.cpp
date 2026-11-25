@@ -30,6 +30,7 @@ using exercise_manager::Workspace;
 using exercise_manager::StorageError;
 using exercise_manager::WorkspaceError;
 using exercise_manager::DefaultsStore;
+using exercise_manager::InvalidPositionError;
 
 namespace
 {
@@ -45,6 +46,17 @@ Course makeCourseWithNumbers(const std::vector<int>& numbers)
         course.exercises.push_back(exercise);
     }
     return course;
+}
+
+// The names of the exercises, in the order they are stored.
+std::vector<std::string> namesOf(const Course& course)
+{
+    std::vector<std::string> names;
+    for (const Exercise& exercise : course.exercises)
+    {
+        names.push_back(exercise.name);
+    }
+    return names;
 }
 
 // In-memory repository, so the service is tested without touching the disk.
@@ -98,6 +110,11 @@ class FakeCourseRepository : public ICourseRepository
         return ids;
     }
 
+    void reorder(const std::vector<int>&) override
+    {
+        throw StorageError("reorder is not used by these tests.");
+    }
+
   private:
     std::map<int, Course> m_courses;
     bool m_failOnSave = false;
@@ -139,6 +156,16 @@ class ExerciseServiceFixture : public ::testing::Test
         fs::create_directories(m_workspace->courseDir(courseId));
         std::ofstream(headerPath(courseId, number)) << "// header";
         std::ofstream(sourcePath(courseId, number)) << "// source";
+    }
+
+    // Creates course 1 and adds the exercises through the service, in the given order.
+    void addCourseWithExercises(const std::vector<std::string>& names)
+    {
+        m_repository.save(makeCourseWithNumbers({}));
+        for (const std::string& name : names)
+        {
+            m_service->addExercise(1, name, "", "");
+        }
     }
 
     fs::path m_root;
@@ -341,6 +368,42 @@ TEST_F(ExerciseServiceFixture, DeletedNumberIsReusedByNextExercise)
     EXPECT_EQ(m_service->addExercise(1, "product", "", ""), 1);
 }
 
+TEST_F(ExerciseServiceFixture, ANewExerciseThatReusesAFreeNumberIsListedLast)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "first", "", "");  // number 1
+    m_service->addExercise(1, "second", "", ""); // number 2
+    m_service->addExercise(1, "third", "", "");  // number 3
+    m_service->deleteExercise(1, 1);
+
+    EXPECT_EQ(m_service->addExercise(1, "fourth", "", ""), 1);
+
+    const Course course = m_repository.load(1);
+    ASSERT_EQ(course.exercises.size(), 3u);
+    EXPECT_EQ(course.exercises[0].number, 2);
+    EXPECT_EQ(course.exercises[1].number, 3);
+    EXPECT_EQ(course.exercises[2].number, 1);
+    EXPECT_EQ(course.exercises[2].name, "fourth");
+}
+
+TEST_F(ExerciseServiceFixture, UpdateAndDeleteKeepTheOrderOfTheOtherExercises)
+{
+    m_repository.save(makeCourseWithNumbers({}));
+    m_service->addExercise(1, "a", "", ""); // number 1
+    m_service->addExercise(1, "b", "", ""); // number 2
+    m_service->addExercise(1, "c", "", ""); // number 3
+    m_service->deleteExercise(1, 1);
+    m_service->addExercise(1, "d", "", ""); // takes number 1, stored last
+
+    m_service->updateExercise(1, 3, "c renamed", "", "");
+    m_service->deleteExercise(1, 2);
+
+    const Course course = m_repository.load(1);
+    ASSERT_EQ(course.exercises.size(), 2u);
+    EXPECT_EQ(course.exercises[0].name, "c renamed");
+    EXPECT_EQ(course.exercises[1].name, "d");
+}
+
 TEST_F(ExerciseServiceFixture, DeleteExerciseThrowsForMissingCourse)
 {
     EXPECT_THROW(m_service->deleteExercise(5, 1), CourseNotFoundError);
@@ -466,4 +529,100 @@ TEST_F(ExerciseServiceFixture, DeleteExerciseWorksWhenDefaultFileIsCorrupt)
 
     EXPECT_NO_THROW(m_service->deleteExercise(1, 1));
     EXPECT_TRUE(m_repository.load(1).exercises.empty());
+}
+
+// ---------- moveExercise ----------
+
+TEST_F(ExerciseServiceFixture, MoveExerciseToTheFirstPosition)
+{
+    addCourseWithExercises({"a", "b", "c", "d"});
+
+    m_service->moveExercise(1, 4, 1);
+
+    EXPECT_EQ(namesOf(m_repository.load(1)), (std::vector<std::string>{"d", "a", "b", "c"}));
+}
+
+TEST_F(ExerciseServiceFixture, MoveExerciseToTheLastPosition)
+{
+    addCourseWithExercises({"a", "b", "c", "d"});
+
+    m_service->moveExercise(1, 1, 4);
+
+    EXPECT_EQ(namesOf(m_repository.load(1)), (std::vector<std::string>{"b", "c", "d", "a"}));
+}
+
+TEST_F(ExerciseServiceFixture, MoveExerciseToTheMiddle)
+{
+    addCourseWithExercises({"a", "b", "c", "d"});
+
+    m_service->moveExercise(1, 4, 2);
+
+    EXPECT_EQ(namesOf(m_repository.load(1)), (std::vector<std::string>{"a", "d", "b", "c"}));
+}
+
+TEST_F(ExerciseServiceFixture, MoveExerciseToItsOwnPositionChangesNothingAndWritesNothing)
+{
+    addCourseWithExercises({"a", "b", "c"});
+    m_repository.setFailOnSave(true); // a write would throw
+
+    EXPECT_NO_THROW(m_service->moveExercise(1, 2, 2));
+
+    m_repository.setFailOnSave(false);
+    EXPECT_EQ(namesOf(m_repository.load(1)), (std::vector<std::string>{"a", "b", "c"}));
+}
+
+TEST_F(ExerciseServiceFixture, MoveExerciseRejectsPositionOutOfRange)
+{
+    addCourseWithExercises({"a", "b", "c", "d"});
+
+    EXPECT_THROW(m_service->moveExercise(1, 1, 0), InvalidPositionError);
+    EXPECT_THROW(m_service->moveExercise(1, 1, 5), InvalidPositionError);
+    EXPECT_THROW(m_service->moveExercise(1, 1, -3), InvalidPositionError);
+    EXPECT_EQ(namesOf(m_repository.load(1)), (std::vector<std::string>{"a", "b", "c", "d"}));
+}
+
+TEST_F(ExerciseServiceFixture, MoveExerciseThrowsForMissingExercise)
+{
+    addCourseWithExercises({"a", "b"});
+
+    EXPECT_THROW(m_service->moveExercise(1, 7, 1), ExerciseNotFoundError);
+    EXPECT_EQ(namesOf(m_repository.load(1)), (std::vector<std::string>{"a", "b"}));
+}
+
+TEST_F(ExerciseServiceFixture, MoveExerciseThrowsForMissingCourse)
+{
+    EXPECT_THROW(m_service->moveExercise(5, 1, 1), CourseNotFoundError);
+}
+
+TEST_F(ExerciseServiceFixture, MoveExerciseUsesTheRealNumberNotThePosition)
+{
+    addCourseWithExercises({"a", "b", "c"}); // real numbers 1, 2, 3
+    m_service->deleteExercise(1, 1);
+    m_service->addExercise(1, "d", "", ""); // takes the free number 1, stored last: b, c, d
+
+    // Number 1 is "d", which is at position 3. Moving it to position 1 must pick "d".
+    m_service->moveExercise(1, 1, 1);
+
+    EXPECT_EQ(namesOf(m_repository.load(1)), (std::vector<std::string>{"d", "b", "c"}));
+}
+
+TEST_F(ExerciseServiceFixture, MoveExerciseKeepsNumbersFilesAndTheDefaultExercise)
+{
+    addCourseWithExercises({"a", "b", "c"});
+    DefaultsStore(*m_workspace).saveDefaultExercise(1, 3);
+
+    m_service->moveExercise(1, 3, 1);
+
+    const Course course = m_repository.load(1);
+    ASSERT_EQ(course.exercises.size(), 3u);
+    EXPECT_EQ(course.exercises[0].name, "c");
+    EXPECT_EQ(course.exercises[0].number, 3);
+    EXPECT_EQ(course.exercises[1].number, 1);
+    EXPECT_EQ(course.exercises[2].number, 2);
+    for (int number = 1; number <= 3; ++number)
+    {
+        EXPECT_TRUE(fs::is_regular_file(headerPath(1, number)));
+        EXPECT_TRUE(fs::is_regular_file(sourcePath(1, number)));
+    }
+    EXPECT_EQ(DefaultsStore(*m_workspace).loadDefaultExercise(1), 3);
 }

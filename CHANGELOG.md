@@ -35,8 +35,15 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - The default course opens when the program starts, and the default exercise opens once when arriving at a course. A default that is missing or damaged is reported, and the user is asked whether to reset it.
 - Errors thrown by the Core are shown as `Error: <message>`, and a failed build shows the full compiler output. Every operation waits for Enter before the menu comes back.
 - The console app starts the CLI. It reads the workspace folder from `EXERCISE_WORKSPACE`, shows a clear message with an example when it is missing, and creates the workspace folders on start.
+- List order: courses and exercises are listed in creation order (the newest item is last), not by their real number. A new item that takes a free number is listed last. The stored order is the display order.
+- Move: `ExerciseService::moveExercise` and `CourseService::moveCourse` move an item to another position (1 to N) and the other items shift. The numbers, folders, files and defaults do not change, and moving an item to its own position writes nothing.
+- `ICourseRepository::reorder` and `JsonCourseRepository::reorder`: store a new order of the courses. The list must match the stored courses exactly, otherwise `StorageError` is thrown and nothing is written.
+- New `InvalidPositionError`, thrown when a position is not between 1 and the number of items.
+- CLI: a `Move` option in the courses screen and in the course screen. It asks for the item and its new position, shows the current position, and shows a message when the item is already there.
 
 ### Changed
 - Exercise number comment updated: deleted numbers are now reused.
 - Removed the unused `_deleted` folder from `Workspace` (`kDeletedFolder`, `deletedDir()` and its creation in `initialize()`), because exercises are now deleted permanently.
 - `Directory.Build.props` also adds the CLI include folder to every project.
+- `JsonCourseRepository::save` no longer sorts `Courses.json` by number: a new course goes to the end and an existing course keeps its position. `listCourseIds` and `CourseService::listCourses` return the stored order, and the CLI no longer sorts the exercises.
+- Menu option numbers changed: the courses screen has `Move` = 6 and `Exit` = 7, and the course screen has `Move` = 6, `Back to courses` = 7 and `Exit` = 8.

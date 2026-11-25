@@ -290,9 +290,6 @@ void JsonCourseRepository::save(const Course& course)
         entries.push_back(entry);
     }
 
-    std::sort(entries.begin(), entries.end(),
-              [](const CourseEntry& a, const CourseEntry& b) { return a.id < b.id; });
-
     // Exercises first: if something fails in between, the course is just not listed yet.
     writeJsonFile(exercisesFile, exercisesToJson(course));
     writeJsonFile(m_workspace.coursesFile(), coursesToJson(entries));
@@ -325,8 +322,36 @@ std::vector<int> JsonCourseRepository::listCourseIds() const
         ids.push_back(entry.id);
     }
 
-    std::sort(ids.begin(), ids.end());
     return ids;
+}
+
+void JsonCourseRepository::reorder(const std::vector<int>& orderedIds)
+{
+    const std::vector<CourseEntry> entries = readCourseEntries(m_workspace);
+
+    if (orderedIds.size() != entries.size())
+    {
+        throw StorageError("The new order does not match the stored courses.");
+    }
+
+    // Same size, every number found, none repeated: so it is the same set of courses.
+    std::vector<CourseEntry> reordered;
+    reordered.reserve(entries.size());
+    for (const int id : orderedIds)
+    {
+        const auto stored = std::find_if(entries.begin(), entries.end(),
+                                         [id](const CourseEntry& entry) { return entry.id == id; });
+        const bool repeated =
+            std::any_of(reordered.begin(), reordered.end(),
+                        [id](const CourseEntry& entry) { return entry.id == id; });
+        if (stored == entries.end() || repeated)
+        {
+            throw StorageError("The new order does not match the stored courses.");
+        }
+        reordered.push_back(*stored);
+    }
+
+    writeJsonFile(m_workspace.coursesFile(), coursesToJson(reordered));
 }
 
 } // namespace exercise_manager
