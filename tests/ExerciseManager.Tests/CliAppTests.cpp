@@ -546,6 +546,37 @@ TEST_F(CliAppTests, MoveCourseMovesNothingWhenTheInputEndsAtThePosition)
     EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{1, 2}));
 }
 
+TEST_F(CliAppTests, MoveCourseShowsTheCurrentPositionNotTheRealNumber)
+{
+    m_courses->addCourse("first", "a", "x");  // number 1
+    m_courses->addCourse("second", "b", "x"); // number 2
+    m_courses->addCourse("third", "c", "x");  // number 3
+    m_courses->deleteCourse(1);
+    m_courses->addCourse("fourth", "d", "x"); // takes the free number 1, stored last: 2, 3, 1
+    // The list shows second, third, fourth. Typing 3 picks "fourth" (real number 1).
+    FakeConsole console{"6", "3", "3", "", "7"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Current position: 3 of 3\n"));
+}
+
+TEST_F(CliAppTests, MoveCourseToItsOwnPositionShowsAMessageAndDoesNotMove)
+{
+    m_courses->addCourse("a", "da", "x");
+    m_courses->addCourse("b", "db", "x");
+    m_courses->addCourse("c", "dc", "x");
+    FakeConsole console{"6", "2", "2", "", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(
+        contains(console.output(), "The course is already at position 2. Nothing changed.\n"));
+    EXPECT_FALSE(contains(console.output(), "Course moved successfully"));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{1, 2, 3}));
+}
+
 // ---------- Enter is asked once per operation ----------
 
 TEST_F(CliAppTests, AnErrorInAnOperationAsksForEnterOnlyOnce)
@@ -1334,6 +1365,41 @@ TEST_F(CliAppTests, MoveExerciseKeepsNumbersFilesAndTheDefaultExercise)
             fs::is_regular_file(m_workspace->courseDir(1) / FileNaming::sourceFileName(1, number)));
     }
     EXPECT_EQ(m_defaults->loadDefaultExercise(1), 3);
+}
+
+TEST_F(CliAppTests, MoveExerciseShowsTheCurrentPositionNotTheRealNumber)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x"); // real number 1
+    m_exercises->addExercise(1, "b", "bd", "x"); // real number 2
+    m_exercises->addExercise(1, "c", "cd", "x"); // real number 3
+    m_exercises->deleteExercise(1, 1);
+    m_exercises->addExercise(1, "d", "dd", "x"); // takes the free number 1, stored last: b, c, d
+    // The list shows b, c, d. Typing 3 picks d (real number 1).
+    FakeConsole console{"1", "1", "6", "3", "3", "", "7", "7"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Current position: 3 of 3\n"));
+}
+
+TEST_F(CliAppTests, MoveExerciseToItsOwnPositionShowsAMessageAndDoesNotMove)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");
+    m_exercises->addExercise(1, "b", "bd", "x");
+    FakeConsole console{"1", "1", "6", "2", "2", "", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(
+        contains(console.output(), "The exercise is already at position 2. Nothing changed.\n"));
+    EXPECT_FALSE(contains(console.output(), "Exercise moved successfully"));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 2u);
+    EXPECT_EQ(exercises[0].name, "a");
+    EXPECT_EQ(exercises[1].name, "b");
 }
 
 // ---------- open exercise ----------

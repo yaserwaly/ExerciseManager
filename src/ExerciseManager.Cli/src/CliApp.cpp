@@ -322,16 +322,20 @@ void CliApp::moveCourse(const std::vector<Course>& courses)
         return;
     }
     const Course& course = courses[*index];
+    const int currentPosition = static_cast<int>(*index) + 1;
+    const int count = static_cast<int>(courses.size());
 
     m_console.clearScreen();
     m_console.writeLine(kLine);
     m_console.writeLine("              Move course");
     m_console.writeLine(kLine);
     showCourseInfo(course);
+    m_console.writeLine("Current position: " + std::to_string(currentPosition) + " of " +
+                        std::to_string(count));
 
     // If the input ends in the middle, nothing is moved.
-    const std::optional<int> newPosition = ConsoleUtils::readNumber(
-        m_console, "Enter new position: ", 1, static_cast<int>(courses.size()));
+    const std::optional<int> newPosition =
+        ConsoleUtils::readNumber(m_console, "Enter new position: ", 1, count);
     if (!newPosition.has_value())
     {
         return;
@@ -340,6 +344,13 @@ void CliApp::moveCourse(const std::vector<Course>& courses)
     runGuarded(
         [&]()
         {
+            if (*newPosition == currentPosition)
+            {
+                m_console.writeLine("The course is already at position " +
+                                    std::to_string(currentPosition) + ". Nothing changed.");
+                return;
+            }
+
             // The real course number is used here, not the position in the list.
             m_courses.moveCourse(course.id, *newPosition);
             m_console.writeLine("Course moved successfully. Name: " + course.name);
@@ -579,16 +590,20 @@ void CliApp::moveExercise(const Course& course)
         return;
     }
     const Exercise& exercise = course.exercises[*index];
+    const int currentPosition = static_cast<int>(*index) + 1;
+    const int count = static_cast<int>(course.exercises.size());
 
     m_console.clearScreen();
     m_console.writeLine(kLine);
     m_console.writeLine("             Move exercise");
     m_console.writeLine(kLine);
     showExerciseInfo(course.id, exercise);
+    m_console.writeLine("Current position: " + std::to_string(currentPosition) + " of " +
+                        std::to_string(count));
 
     // If the input ends in the middle, nothing is moved.
-    const std::optional<int> newPosition = ConsoleUtils::readNumber(
-        m_console, "Enter new position: ", 1, static_cast<int>(course.exercises.size()));
+    const std::optional<int> newPosition =
+        ConsoleUtils::readNumber(m_console, "Enter new position: ", 1, count);
     if (!newPosition.has_value())
     {
         return;
@@ -597,6 +612,13 @@ void CliApp::moveExercise(const Course& course)
     runGuarded(
         [&]()
         {
+            if (*newPosition == currentPosition)
+            {
+                m_console.writeLine("The exercise is already at position " +
+                                    std::to_string(currentPosition) + ". Nothing changed.");
+                return;
+            }
+
             // The real exercise number is used here, not the position in the list.
             m_exercises.moveExercise(course.id, exercise.number, *newPosition);
             m_console.writeLine("Exercise moved successfully. Name: " + exercise.name);
