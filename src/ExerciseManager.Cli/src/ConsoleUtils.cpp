@@ -1,9 +1,11 @@
 #include "exercise_manager/cli/ConsoleUtils.h"
 
+#include <cctype>
 #include <charconv>
 #include <cstddef>
 #include <string>
 #include <system_error>
+#include <utility>
 
 namespace exercise_manager::cli
 {
@@ -25,10 +27,31 @@ std::string_view trim(std::string_view text)
     return text.substr(first, last - first + 1);
 }
 
-} // namespace
+// True if the line is the cancel word: any letter case, spaces around it are ignored.
+bool isCancelWord(std::string_view line)
+{
+    const std::string_view word = trim(line);
+    if (word.size() != ConsoleUtils::kCancelInput.size())
+    {
+        return false;
+    }
+    for (std::size_t i = 0; i < word.size(); ++i)
+    {
+        const int typed = std::tolower(static_cast<unsigned char>(word[i]));
+        const int expected =
+            std::tolower(static_cast<unsigned char>(ConsoleUtils::kCancelInput[i]));
+        if (typed != expected)
+        {
+            return false;
+        }
+    }
+    return true;
+}
 
-std::optional<int> ConsoleUtils::readNumber(IConsole& console, std::string_view prompt,
-                                            int minValue, int maxValue)
+// The shared code of readNumber and readNumberOrCancel.
+// allowCancel == false: the cancel word is just bad input, like any other text.
+CancellableInput<int> readNumberImpl(IConsole& console, std::string_view prompt, int minValue,
+                                     int maxValue, bool allowCancel)
 {
     while (true)
     {
@@ -37,7 +60,12 @@ std::optional<int> ConsoleUtils::readNumber(IConsole& console, std::string_view 
         std::string line;
         if (!console.readLine(line))
         {
-            return std::nullopt;
+            return {InputStatus::EndOfInput, 0};
+        }
+
+        if (allowCancel && isCancelWord(line))
+        {
+            return {InputStatus::Cancelled, 0};
         }
 
         const std::string_view text = trim(line);
@@ -48,12 +76,83 @@ std::optional<int> ConsoleUtils::readNumber(IConsole& console, std::string_view 
 
         if (wholeTextRead && number >= minValue && number <= maxValue)
         {
-            return number;
+            return {InputStatus::Value, number};
         }
 
         console.writeLine("Invalid input. Please enter a number between " +
                           std::to_string(minValue) + " and " + std::to_string(maxValue) + ".");
     }
+}
+
+// The shared code of readText and readTextOrCancel.
+CancellableInput<std::string> readTextImpl(IConsole& console, std::string_view prompt,
+                                           bool allowCancel)
+{
+    console.write(prompt);
+
+    std::string line;
+    if (!console.readLine(line))
+    {
+        return {InputStatus::EndOfInput, {}};
+    }
+    if (allowCancel && isCancelWord(line))
+    {
+        return {InputStatus::Cancelled, {}};
+    }
+    return {InputStatus::Value, std::move(line)};
+}
+
+// The shared code of readTextOrKeep and readTextOrKeepOrCancel.
+CancellableInput<std::string> readTextOrKeepImpl(IConsole& console, std::string_view prompt,
+                                                 std::string_view current, bool allowCancel)
+{
+    console.write(std::string(prompt) + " [" + std::string(current) + "]: ");
+
+    std::string line;
+    if (!console.readLine(line))
+    {
+        return {InputStatus::EndOfInput, {}};
+    }
+    // The cancel word is checked before the "keep" rule, so it never keeps a value.
+    if (allowCancel && isCancelWord(line))
+    {
+        return {InputStatus::Cancelled, {}};
+    }
+    if (trim(line).empty())
+    {
+        return {InputStatus::Value, std::string(current)};
+    }
+    return {InputStatus::Value, std::move(line)};
+}
+
+// Turns a result into the old "value or nothing" form. Cancelled never happens here,
+// because the old functions never allow cancelling.
+template <typename T> std::optional<T> toOptional(CancellableInput<T> input)
+{
+    if (input.status == InputStatus::Value)
+    {
+        return std::move(input.value);
+    }
+    return std::nullopt;
+}
+
+} // namespace
+
+std::string ConsoleUtils::cancelHint()
+{
+    return "(" + std::string(kCancelInput) + " to cancel)";
+}
+
+std::optional<int> ConsoleUtils::readNumber(IConsole& console, std::string_view prompt,
+                                            int minValue, int maxValue)
+{
+    return toOptional(readNumberImpl(console, prompt, minValue, maxValue, false));
+}
+
+CancellableInput<int> ConsoleUtils::readNumberOrCancel(IConsole& console, std::string_view prompt,
+                                                       int minValue, int maxValue)
+{
+    return readNumberImpl(console, prompt, minValue, maxValue, true);
 }
 
 std::optional<bool> ConsoleUtils::askYesNo(IConsole& console, std::string_view question)
@@ -84,31 +183,26 @@ std::optional<bool> ConsoleUtils::askYesNo(IConsole& console, std::string_view q
 
 std::optional<std::string> ConsoleUtils::readText(IConsole& console, std::string_view prompt)
 {
-    console.write(prompt);
+    return toOptional(readTextImpl(console, prompt, false));
+}
 
-    std::string line;
-    if (!console.readLine(line))
-    {
-        return std::nullopt;
-    }
-    return line;
+CancellableInput<std::string> ConsoleUtils::readTextOrCancel(IConsole& console,
+                                                             std::string_view prompt)
+{
+    return readTextImpl(console, prompt, true);
 }
 
 std::optional<std::string> ConsoleUtils::readTextOrKeep(IConsole& console, std::string_view prompt,
                                                         std::string_view current)
 {
-    console.write(std::string(prompt) + " [" + std::string(current) + "]: ");
+    return toOptional(readTextOrKeepImpl(console, prompt, current, false));
+}
 
-    std::string line;
-    if (!console.readLine(line))
-    {
-        return std::nullopt;
-    }
-    if (trim(line).empty())
-    {
-        return std::string(current);
-    }
-    return line;
+CancellableInput<std::string> ConsoleUtils::readTextOrKeepOrCancel(IConsole& console,
+                                                                   std::string_view prompt,
+                                                                   std::string_view current)
+{
+    return readTextOrKeepImpl(console, prompt, current, true);
 }
 
 bool ConsoleUtils::waitForEnter(IConsole& console)
