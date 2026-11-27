@@ -2477,3 +2477,55 @@ TEST_F(CliAppTests, CancelAtTheDefaultExerciseMenuKeepsTheCurrentDefault)
     EXPECT_FALSE(contains(console.output(), "Default exercise removed."));
     EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
 }
+
+// ---------- cancel hint in the item questions ----------
+
+TEST_F(CliAppTests, ThePickCourseQuestionShowsTheCancelHint)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "/c", "7"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Enter course number (/c to cancel): "));
+}
+
+TEST_F(CliAppTests, ThePickExerciseQuestionShowsTheCancelHint)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "1", "/c", "7", "7"};
+
+    runApp(console);
+
+    EXPECT_TRUE(contains(console.output(), "Enter exercise number (/c to cancel): "));
+}
+
+TEST_F(CliAppTests, ThePickQuestionShowsTheCancelHintEveryTimeItIsAsked)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "9", "/c", "7"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Enter course number (/c to cancel): "), 2);
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 1.\n"));
+}
+
+TEST_F(CliAppTests, ThePickQuestionsAreTheOnlyQuestionsWithTheCancelHintForNow)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    // Open the course, delete an exercise, answer "n" to the yes/no question, go back, exit.
+    FakeConsole console{"1", "1", "5", "1", "n", "", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    // One hint in the course question and one in the exercise question, nowhere else.
+    EXPECT_EQ(countOccurrences(console.output(), "(/c to cancel)"), 2);
+    EXPECT_TRUE(contains(console.output(), "Choose option [1-7]: "));
+    EXPECT_TRUE(contains(console.output(), "Choose option [1-8]: "));
+    EXPECT_TRUE(contains(console.output(),
+                         "Delete this exercise and its files? This cannot be undone. (y/n): "));
+}

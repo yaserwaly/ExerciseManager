@@ -264,7 +264,7 @@ void CliApp::addCourse()
 std::optional<std::size_t> CliApp::pickCourse(const std::vector<Course>& courses)
 {
     return pickPosition(m_console, courses.size(), "There are no courses.",
-                        "Enter course number: ");
+                        "Enter course number " + ConsoleUtils::cancelHint() + ": ");
 }
 
 void CliApp::showCourseInfo(const Course& course)
@@ -521,7 +521,7 @@ void CliApp::addExercise(int courseId)
 std::optional<std::size_t> CliApp::pickExercise(const Course& course)
 {
     return pickPosition(m_console, course.exercises.size(), "There are no exercises.",
-                        "Enter exercise number: ");
+                        "Enter exercise number " + ConsoleUtils::cancelHint() + ": ");
 }
 
 void CliApp::showExerciseInfo(int courseId, const Exercise& exercise)
