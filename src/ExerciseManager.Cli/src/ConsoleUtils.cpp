@@ -143,6 +143,11 @@ std::string ConsoleUtils::cancelHint()
     return "(" + std::string(kCancelInput) + " to cancel)";
 }
 
+std::string ConsoleUtils::cancelNotice()
+{
+    return "Type " + std::string(kCancelInput) + " at any question to cancel.";
+}
+
 std::optional<int> ConsoleUtils::readNumber(IConsole& console, std::string_view prompt,
                                             int minValue, int maxValue)
 {

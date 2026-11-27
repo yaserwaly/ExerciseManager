@@ -47,6 +47,11 @@ class ConsoleUtils
     /// It is built from kCancelInput, so the hint and the word can never differ.
     static std::string cancelHint();
 
+    /// @brief A line that tells the user how to cancel, e.g. `Type /c at any question to cancel.`
+    ///
+    /// Shown once at the top of an operation screen. It is built from kCancelInput.
+    static std::string cancelNotice();
+
     /// @brief Asks for a whole number inside a range, and asks again on bad input.
     /// @param console The console to use.
     /// @param prompt The text shown before reading.

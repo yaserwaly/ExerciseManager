@@ -420,3 +420,13 @@ TEST(ConsoleUtilsTests, CancelHintHasTheAgreedFormat)
 {
     EXPECT_EQ(ConsoleUtils::cancelHint(), "(/c to cancel)");
 }
+
+TEST(ConsoleUtilsTests, CancelNoticeContainsTheCancelWord)
+{
+    EXPECT_TRUE(contains(ConsoleUtils::cancelNotice(), std::string(ConsoleUtils::kCancelInput)));
+}
+
+TEST(ConsoleUtilsTests, CancelNoticeHasTheAgreedFormat)
+{
+    EXPECT_EQ(ConsoleUtils::cancelNotice(), "Type /c at any question to cancel.");
+}

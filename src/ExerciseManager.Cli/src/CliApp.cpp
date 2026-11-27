@@ -232,6 +232,7 @@ void CliApp::addCourse()
     m_console.clearScreen();
     m_console.writeLine(kLine);
     m_console.writeLine("               Add course");
+    m_console.writeLine(ConsoleUtils::cancelNotice());
     m_console.writeLine(kLine);
 
     // If the user cancels, or the input ends in the middle, nothing is added.
@@ -326,6 +327,7 @@ void CliApp::updateCourse(const std::vector<Course>& courses)
     m_console.writeLine("              Update course");
     m_console.writeLine(kLine);
     showCourseInfo(course);
+    m_console.writeLine(ConsoleUtils::cancelNotice());
     m_console.writeLine("Press Enter to keep the current value.");
 
     // If the user cancels, or the input ends in the middle, nothing is changed.
@@ -374,6 +376,7 @@ void CliApp::moveCourse(const std::vector<Course>& courses)
     showCourseInfo(course);
     m_console.writeLine("Current position: " + std::to_string(currentPosition) + " of " +
                         std::to_string(count));
+    m_console.writeLine(ConsoleUtils::cancelNotice());
 
         // If the user cancels, or the input ends in the middle, nothing is moved.
     const std::optional<int> newPosition =
@@ -404,6 +407,7 @@ void CliApp::setDefaultCourse(const std::vector<Course>& courses)
     m_console.clearScreen();
     m_console.writeLine(kLine);
     m_console.writeLine("           Set default course");
+    m_console.writeLine(ConsoleUtils::cancelNotice());
     m_console.writeLine(kLine);
 
     const DefaultCourseCheck check = checkDefaultCourse(m_defaults, courses);
@@ -489,6 +493,7 @@ void CliApp::addExercise(int courseId)
     m_console.clearScreen();
     m_console.writeLine(kLine);
     m_console.writeLine("              Add exercise");
+    m_console.writeLine(ConsoleUtils::cancelNotice());
     m_console.writeLine(kLine);
 
     // If the user cancels, or the input ends in the middle, nothing is added.
@@ -592,6 +597,7 @@ void CliApp::updateExercise(const Course& course)
     m_console.writeLine("             Update exercise");
     m_console.writeLine(kLine);
     showExerciseInfo(course.id, exercise);
+    m_console.writeLine(ConsoleUtils::cancelNotice());
     m_console.writeLine("Press Enter to keep the current value.");
 
     // If the user cancels, or the input ends in the middle, nothing is changed.
@@ -642,6 +648,7 @@ void CliApp::moveExercise(const Course& course)
     showExerciseInfo(course.id, exercise);
     m_console.writeLine("Current position: " + std::to_string(currentPosition) + " of " +
                         std::to_string(count));
+    m_console.writeLine(ConsoleUtils::cancelNotice());
 
         // If the user cancels, or the input ends in the middle, nothing is moved.
     const std::optional<int> newPosition =
@@ -710,6 +717,7 @@ void CliApp::setDefaultExercise(const Course& course)
     m_console.clearScreen();
     m_console.writeLine(kLine);
     m_console.writeLine("          Set default exercise");
+    m_console.writeLine(ConsoleUtils::cancelNotice());
     m_console.writeLine(kLine);
 
     const DefaultExerciseCheck check = checkDefaultExercise(m_defaults, course);

@@ -2529,3 +2529,114 @@ TEST_F(CliAppTests, ThePickQuestionsAreTheOnlyQuestionsWithTheCancelHintForNow)
     EXPECT_TRUE(contains(console.output(),
                          "Delete this exercise and its files? This cannot be undone. (y/n): "));
 }
+
+// ---------- cancel notice on the operation screens ----------
+
+TEST_F(CliAppTests, TheAddCourseScreenShowsTheCancelNoticeOnce)
+{
+    FakeConsole console{"3", "/c", "7"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Type /c at any question to cancel.\n"), 1);
+}
+
+TEST_F(CliAppTests, TheAddExerciseScreenShowsTheCancelNoticeOnce)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "3", "/c", "7", "7"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Type /c at any question to cancel.\n"), 1);
+}
+
+TEST_F(CliAppTests, TheUpdateCourseScreenShowsTheCancelNoticeOnceBeforeTheKeepLine)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "1", "new", "new short", "new full", "", "7"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Type /c at any question to cancel.\n"), 1);
+    EXPECT_TRUE(contains(console.output(), "Type /c at any question to cancel.\n"
+                                           "Press Enter to keep the current value.\n"));
+}
+
+TEST_F(CliAppTests, TheUpdateExerciseScreenShowsTheCancelNoticeOnceBeforeTheKeepLine)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "1", "new", "new short", "new full", "", "7", "7"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Type /c at any question to cancel.\n"), 1);
+    EXPECT_TRUE(contains(console.output(), "Type /c at any question to cancel.\n"
+                                           "Press Enter to keep the current value.\n"));
+}
+
+TEST_F(CliAppTests, TheMoveCourseScreenShowsTheCancelNoticeOnceEvenAfterABadPosition)
+{
+    m_courses->addCourse("a", "da", "x");
+    m_courses->addCourse("b", "db", "x");
+    m_courses->addCourse("c", "dc", "x");
+    FakeConsole console{"6", "3", "9", "/c", "7"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Type /c at any question to cancel.\n"), 1);
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 3.\n"));
+}
+
+TEST_F(CliAppTests, TheMoveExerciseScreenShowsTheCancelNoticeOnceEvenAfterABadPosition)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");
+    m_exercises->addExercise(1, "b", "bd", "x");
+    m_exercises->addExercise(1, "c", "cd", "x");
+    FakeConsole console{"1", "1", "6", "3", "9", "/c", "7", "7"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Type /c at any question to cancel.\n"), 1);
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 3.\n"));
+}
+
+TEST_F(CliAppTests, TheSetDefaultCourseScreenShowsTheCancelNoticeOnceEvenAfterABadOption)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"2", "3", "/c", "7"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Type /c at any question to cancel.\n"), 1);
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 2.\n"));
+}
+
+TEST_F(CliAppTests, TheSetDefaultExerciseScreenShowsTheCancelNoticeOnceEvenAfterABadOption)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "2", "3", "/c", "7", "7"};
+
+    runApp(console);
+
+    EXPECT_EQ(countOccurrences(console.output(), "Type /c at any question to cancel.\n"), 1);
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 2.\n"));
+}
+
+TEST_F(CliAppTests, TheMainMenusAndTheYesNoQuestionsHaveNoCancelNotice)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    // Open the course, delete an exercise, answer "n" to the yes/no question, go back, exit.
+    FakeConsole console{"1", "1", "5", "1", "n", "", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_FALSE(contains(console.output(), "Type /c"));
+}
