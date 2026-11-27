@@ -2214,3 +2214,139 @@ TEST_F(CliAppTests, AnExerciseCanBeAddedAfterACancelledAddAndTakesNumberOne)
     EXPECT_EQ(exercises[0].name, "adder");
     EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
 }
+
+// ---------- cancel: updating ----------
+
+TEST_F(CliAppTests, CancelWhenUpdatingACourseAtTheNameChangesNothing)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "1", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto courses = m_courses->listCourses();
+    ASSERT_EQ(courses.size(), 1u);
+    EXPECT_EQ(courses[0].name, "old");
+    EXPECT_EQ(courses[0].description, "old short");
+    EXPECT_EQ(courses[0].fullDescription, "old full");
+    EXPECT_TRUE(contains(console.output(), "Course name [old]: "));
+    EXPECT_FALSE(contains(console.output(), "Short description [old short]: "));
+    EXPECT_FALSE(contains(console.output(), "Course updated successfully."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenUpdatingACourseAtTheShortDescriptionDropsTheTypedName)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "1", "new", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto courses = m_courses->listCourses();
+    ASSERT_EQ(courses.size(), 1u);
+    EXPECT_EQ(courses[0].name, "old");
+    EXPECT_EQ(courses[0].description, "old short");
+    EXPECT_EQ(courses[0].fullDescription, "old full");
+    EXPECT_FALSE(contains(console.output(), "Full description [old full]: "));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenUpdatingACourseAtTheFullDescriptionDropsEveryTypedField)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "1", "new", "new short", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto courses = m_courses->listCourses();
+    ASSERT_EQ(courses.size(), 1u);
+    EXPECT_EQ(courses[0].name, "old");
+    EXPECT_EQ(courses[0].description, "old short");
+    EXPECT_EQ(courses[0].fullDescription, "old full");
+    EXPECT_FALSE(contains(console.output(), "Course updated successfully."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, ACourseCanBeUpdatedAfterACancelledUpdate)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "1", "/c", "4", "1", "new", "", "", "", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto courses = m_courses->listCourses();
+    ASSERT_EQ(courses.size(), 1u);
+    EXPECT_EQ(courses[0].name, "new");
+    EXPECT_EQ(courses[0].description, "old short");
+    EXPECT_EQ(courses[0].fullDescription, "old full");
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, CancelWhenUpdatingAnExerciseAtTheNameChangesNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "1", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 1u);
+    EXPECT_EQ(exercises[0].name, "old");
+    EXPECT_EQ(exercises[0].description, "old short");
+    EXPECT_EQ(exercises[0].fullDescription, "old full");
+    EXPECT_TRUE(contains(console.output(), "Exercise name [old]: "));
+    EXPECT_FALSE(contains(console.output(), "Short description [old short]: "));
+    EXPECT_FALSE(contains(console.output(), "Exercise updated successfully."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenUpdatingAnExerciseAtTheShortDescriptionDropsTheTypedName)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "1", "new", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 1u);
+    EXPECT_EQ(exercises[0].name, "old");
+    EXPECT_EQ(exercises[0].description, "old short");
+    EXPECT_EQ(exercises[0].fullDescription, "old full");
+    EXPECT_FALSE(contains(console.output(), "Full description [old full]: "));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenUpdatingAnExerciseAtTheFullDescriptionDropsEveryTypedField)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "1", "new", "new short", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 1u);
+    EXPECT_EQ(exercises[0].name, "old");
+    EXPECT_EQ(exercises[0].description, "old short");
+    EXPECT_EQ(exercises[0].fullDescription, "old full");
+    EXPECT_FALSE(contains(console.output(), "Exercise updated successfully."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, AnExerciseCanBeUpdatedAfterACancelledUpdate)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "1", "/c", "4", "1", "new", "", "", "", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 1u);
+    EXPECT_EQ(exercises[0].name, "new");
+    EXPECT_EQ(exercises[0].description, "old short");
+    EXPECT_EQ(exercises[0].fullDescription, "old full");
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}

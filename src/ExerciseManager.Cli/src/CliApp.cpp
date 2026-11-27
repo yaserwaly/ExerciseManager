@@ -149,6 +149,20 @@ std::optional<std::string> askText(IConsole& console, std::string_view prompt)
     return std::move(answer.value);
 }
 
+// Like askText, but an empty line keeps the current value (shown in the prompt).
+// Returns the new text, the current value, or no value if the user cancelled or the input ended.
+std::optional<std::string> askTextOrKeep(IConsole& console, std::string_view prompt,
+                                         std::string_view current)
+{
+    CancellableInput<std::string> answer =
+        ConsoleUtils::readTextOrKeepOrCancel(console, prompt, current);
+    if (answer.status != InputStatus::Value)
+    {
+        return std::nullopt;
+    }
+    return std::move(answer.value);
+}
+
 } // namespace
 
 CliApp::CliApp(IConsole& console, ICourseRepository& repository, CourseService& courses,
@@ -301,21 +315,21 @@ void CliApp::updateCourse(const std::vector<Course>& courses)
     showCourseInfo(course);
     m_console.writeLine("Press Enter to keep the current value.");
 
-    // If the input ends in the middle, nothing is changed.
+    // If the user cancels, or the input ends in the middle, nothing is changed.
     const std::optional<std::string> name =
-        ConsoleUtils::readTextOrKeep(m_console, "Course name", course.name);
+        askTextOrKeep(m_console, "Course name", course.name);
     if (!name.has_value())
     {
         return;
     }
     const std::optional<std::string> description =
-        ConsoleUtils::readTextOrKeep(m_console, "Short description", course.description);
+        askTextOrKeep(m_console, "Short description", course.description);
     if (!description.has_value())
     {
         return;
     }
     const std::optional<std::string> fullDescription =
-        ConsoleUtils::readTextOrKeep(m_console, "Full description", course.fullDescription);
+        askTextOrKeep(m_console, "Full description", course.fullDescription);
     if (!fullDescription.has_value())
     {
         return;
@@ -567,21 +581,21 @@ void CliApp::updateExercise(const Course& course)
     showExerciseInfo(course.id, exercise);
     m_console.writeLine("Press Enter to keep the current value.");
 
-    // If the input ends in the middle, nothing is changed.
+    // If the user cancels, or the input ends in the middle, nothing is changed.
     const std::optional<std::string> name =
-        ConsoleUtils::readTextOrKeep(m_console, "Exercise name", exercise.name);
+        askTextOrKeep(m_console, "Exercise name", exercise.name);
     if (!name.has_value())
     {
         return;
     }
     const std::optional<std::string> description =
-        ConsoleUtils::readTextOrKeep(m_console, "Short description", exercise.description);
+        askTextOrKeep(m_console, "Short description", exercise.description);
     if (!description.has_value())
     {
         return;
     }
     const std::optional<std::string> fullDescription =
-        ConsoleUtils::readTextOrKeep(m_console, "Full description", exercise.fullDescription);
+        askTextOrKeep(m_console, "Full description", exercise.fullDescription);
     if (!fullDescription.has_value())
     {
         return;
