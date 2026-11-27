@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace exercise_manager::cli
@@ -136,6 +137,18 @@ std::optional<std::size_t> pickPosition(IConsole& console, std::size_t count,
     return static_cast<std::size_t>(answer.value - 1);
 }
 
+// Asks for one line of text that can be cancelled. Returns the line as typed, or no value if
+// the user cancelled or the input ended. In both cases the caller stops its operation.
+std::optional<std::string> askText(IConsole& console, std::string_view prompt)
+{
+    CancellableInput<std::string> answer = ConsoleUtils::readTextOrCancel(console, prompt);
+    if (answer.status != InputStatus::Value)
+    {
+        return std::nullopt;
+    }
+    return std::move(answer.value);
+}
+
 } // namespace
 
 CliApp::CliApp(IConsole& console, ICourseRepository& repository, CourseService& courses,
@@ -194,20 +207,20 @@ void CliApp::addCourse()
     m_console.writeLine("               Add course");
     m_console.writeLine(kLine);
 
-    // If the input ends in the middle, nothing is added.
-    const std::optional<std::string> name = ConsoleUtils::readText(m_console, "Course name: ");
+    // If the user cancels, or the input ends in the middle, nothing is added.
+    const std::optional<std::string> name = askText(m_console, "Course name: ");
     if (!name.has_value())
     {
         return;
     }
     const std::optional<std::string> description =
-        ConsoleUtils::readText(m_console, "Short description: ");
+        askText(m_console, "Short description: ");
     if (!description.has_value())
     {
         return;
     }
     const std::optional<std::string> fullDescription =
-        ConsoleUtils::readText(m_console, "Full description: ");
+        askText(m_console, "Full description: ");
     if (!fullDescription.has_value())
     {
         return;
@@ -451,20 +464,20 @@ void CliApp::addExercise(int courseId)
     m_console.writeLine("              Add exercise");
     m_console.writeLine(kLine);
 
-    // If the input ends in the middle, nothing is added.
-    const std::optional<std::string> name = ConsoleUtils::readText(m_console, "Exercise name: ");
+    // If the user cancels, or the input ends in the middle, nothing is added.
+    const std::optional<std::string> name = askText(m_console, "Exercise name: ");
     if (!name.has_value())
     {
         return;
     }
     const std::optional<std::string> description =
-        ConsoleUtils::readText(m_console, "Short description: ");
+        askText(m_console, "Short description: ");
     if (!description.has_value())
     {
         return;
     }
     const std::optional<std::string> fullDescription =
-        ConsoleUtils::readText(m_console, "Full description: ");
+        askText(m_console, "Full description: ");
     if (!fullDescription.has_value())
     {
         return;

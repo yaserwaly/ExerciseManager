@@ -2111,3 +2111,106 @@ TEST_F(CliAppTests, CancelWhenChoosingTheDefaultExerciseSavesNothing)
     EXPECT_FALSE(contains(console.output(), "Default exercise set."));
     EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
 }
+
+// ---------- cancel: adding ----------
+
+TEST_F(CliAppTests, CancelWhenAddingACourseAtTheNameAddsNothing)
+{
+    FakeConsole console{"3", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(m_courses->listCourses().empty());
+    EXPECT_FALSE(contains(console.output(), "Course created successfully."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+    // The courses screen is shown before the add screen and again after the cancel.
+    EXPECT_EQ(countOccurrences(console.output(), "[1] Open course\n"), 2);
+}
+
+TEST_F(CliAppTests, CancelWhenAddingACourseAtTheShortDescriptionAddsNothing)
+{
+    FakeConsole console{"3", "C++ Basics", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(m_courses->listCourses().empty());
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenAddingACourseAtTheFullDescriptionAddsNothing)
+{
+    FakeConsole console{"3", "C++ Basics", "short", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(m_courses->listCourses().empty());
+    EXPECT_FALSE(fs::exists(m_workspace->courseDir(1)));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, ACourseCanBeAddedAfterACancelledAdd)
+{
+    FakeConsole console{"3", "/c", "3", "C++ Basics", "short", "full", "", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto courses = m_courses->listCourses();
+    ASSERT_EQ(courses.size(), 1u);
+    EXPECT_EQ(courses[0].id, 1);
+    EXPECT_EQ(courses[0].name, "C++ Basics");
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, CancelWhenAddingAnExerciseAtTheNameAddsNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "3", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(m_repository->load(1).exercises.empty());
+    EXPECT_FALSE(contains(console.output(), "Exercise created successfully."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+    // The course screen is shown before the add screen and again after the cancel.
+    EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 2);
+}
+
+TEST_F(CliAppTests, CancelWhenAddingAnExerciseAtTheShortDescriptionAddsNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "3", "adder", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(m_repository->load(1).exercises.empty());
+    EXPECT_FALSE(fs::exists(m_workspace->courseDir(1) / FileNaming::headerFileName(1, 1)));
+    EXPECT_FALSE(fs::exists(m_workspace->courseDir(1) / FileNaming::sourceFileName(1, 1)));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenAddingAnExerciseAtTheFullDescriptionAddsNothingAndCreatesNoFiles)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "3", "adder", "short", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(m_repository->load(1).exercises.empty());
+    EXPECT_FALSE(fs::exists(m_workspace->courseDir(1) / FileNaming::headerFileName(1, 1)));
+    EXPECT_FALSE(fs::exists(m_workspace->courseDir(1) / FileNaming::sourceFileName(1, 1)));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, AnExerciseCanBeAddedAfterACancelledAddAndTakesNumberOne)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "1", "3", "/c", "3", "adder", "short", "full", "", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 1u);
+    EXPECT_EQ(exercises[0].number, 1);
+    EXPECT_EQ(exercises[0].name, "adder");
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
