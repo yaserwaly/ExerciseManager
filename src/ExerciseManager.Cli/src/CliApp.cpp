@@ -114,7 +114,8 @@ DefaultExerciseCheck checkDefaultExercise(const DefaultsStore& defaults, const C
 
 // Asks for a position in a list that is shown numbered 1..N. The number typed is only the
 // position in the list, never the real course or exercise number.
-// Returns the position as a 0-based index, or no value if the list is empty or the input ended.
+// Returns the position as a 0-based index, or no value if the list is empty, the user
+// cancelled, or the input ended. In every "no value" case the caller stops its operation.
 std::optional<std::size_t> pickPosition(IConsole& console, std::size_t count,
                                         std::string_view emptyMessage, std::string_view prompt)
 {
@@ -125,13 +126,14 @@ std::optional<std::size_t> pickPosition(IConsole& console, std::size_t count,
         return std::nullopt;
     }
 
-    const std::optional<int> number =
-        ConsoleUtils::readNumber(console, prompt, 1, static_cast<int>(count));
-    if (!number.has_value())
+    const CancellableInput<int> answer =
+        ConsoleUtils::readNumberOrCancel(console, prompt, 1, static_cast<int>(count));
+    if (answer.status != InputStatus::Value)
     {
+        // Cancelled, or the input ended: nothing is changed.
         return std::nullopt;
     }
-    return static_cast<std::size_t>(*number - 1);
+    return static_cast<std::size_t>(answer.value - 1);
 }
 
 } // namespace

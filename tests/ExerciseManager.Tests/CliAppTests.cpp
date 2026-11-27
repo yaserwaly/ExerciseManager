@@ -1952,3 +1952,162 @@ TEST_F(CliAppTests, TheBuildingMessageIsFollowedByAnEmptyLine)
 
     EXPECT_TRUE(contains(console.output(), "Building the exercise...\n\n"));
 }
+
+// ---------- cancel: choosing an item ----------
+
+TEST_F(CliAppTests, CancelWhenOpeningACourseGoesBackToTheCoursesScreen)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"1", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(countOccurrences(console.output(), "[1] Open course\n"), 2);
+    EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 0);
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenUpdatingACourseChangesNothing)
+{
+    m_courses->addCourse("old", "old short", "old full");
+    FakeConsole console{"4", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto courses = m_courses->listCourses();
+    ASSERT_EQ(courses.size(), 1u);
+    EXPECT_EQ(courses[0].name, "old");
+    EXPECT_EQ(courses[0].description, "old short");
+    EXPECT_FALSE(contains(console.output(), "Press Enter to keep the current value."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenDeletingACourseKeepsTheCourseAndAsksNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"5", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_courses->listCourses().size(), 1u);
+    EXPECT_TRUE(fs::exists(m_workspace->courseDir(1)));
+    EXPECT_FALSE(contains(console.output(), "(y/n): "));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelAfterAnInvalidNumberWhenDeletingACourseKeepsTheCourse)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"5", "9", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 1.\n"));
+    EXPECT_EQ(m_courses->listCourses().size(), 1u);
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenMovingACourseChangesNothing)
+{
+    m_courses->addCourse("a", "da", "x");
+    m_courses->addCourse("b", "db", "x");
+    m_courses->addCourse("c", "dc", "x");
+    FakeConsole console{"6", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{1, 2, 3}));
+    EXPECT_FALSE(contains(console.output(), "Current position:"));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenChoosingTheDefaultCourseSavesNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"2", "1", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_FALSE(m_defaults->loadDefaultCourse().has_value());
+    EXPECT_FALSE(contains(console.output(), "Default course set."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenOpeningAnExerciseShowsTheListAgainAndRunsNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "1", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_TRUE(m_runner.calls.empty());
+    EXPECT_FALSE(contains(console.output(), "Run the exercise?"));
+    // The list is shown before the cancelled question and again after it.
+    EXPECT_EQ(countOccurrences(console.output(), "Exercises:"), 2);
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenUpdatingAnExerciseChangesNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "old", "old short", "old full");
+    FakeConsole console{"1", "1", "4", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 1u);
+    EXPECT_EQ(exercises[0].name, "old");
+    EXPECT_EQ(exercises[0].description, "old short");
+    EXPECT_FALSE(contains(console.output(), "Press Enter to keep the current value."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenDeletingAnExerciseKeepsItAndItsFiles)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "5", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_repository->load(1).exercises.size(), 1u);
+    EXPECT_TRUE(fs::exists(m_workspace->courseDir(1) / FileNaming::headerFileName(1, 1)));
+    EXPECT_TRUE(fs::exists(m_workspace->courseDir(1) / FileNaming::sourceFileName(1, 1)));
+    EXPECT_FALSE(contains(console.output(), "(y/n): "));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenMovingAnExerciseChangesNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");
+    m_exercises->addExercise(1, "b", "bd", "x");
+    m_exercises->addExercise(1, "c", "cd", "x");
+    FakeConsole console{"1", "1", "6", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 3u);
+    EXPECT_EQ(exercises[0].name, "a");
+    EXPECT_EQ(exercises[1].name, "b");
+    EXPECT_EQ(exercises[2].name, "c");
+    EXPECT_FALSE(contains(console.output(), "Current position:"));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelWhenChoosingTheDefaultExerciseSavesNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "2", "1", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_FALSE(m_defaults->loadDefaultExercise(1).has_value());
+    EXPECT_FALSE(contains(console.output(), "Default exercise set."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
