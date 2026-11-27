@@ -2350,3 +2350,130 @@ TEST_F(CliAppTests, AnExerciseCanBeUpdatedAfterACancelledUpdate)
     EXPECT_EQ(exercises[0].fullDescription, "old full");
     EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
 }
+
+// ---------- cancel: move and set default ----------
+
+TEST_F(CliAppTests, CancelWhenTypingTheNewPositionOfACourseMovesNothing)
+{
+    m_courses->addCourse("a", "da", "x");
+    m_courses->addCourse("b", "db", "x");
+    m_courses->addCourse("c", "dc", "x");
+    FakeConsole console{"6", "3", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{1, 2, 3}));
+    EXPECT_TRUE(contains(console.output(), "Current position: 3 of 3\n"));
+    EXPECT_FALSE(contains(console.output(), "Course moved successfully"));
+    EXPECT_FALSE(contains(console.output(), "Nothing changed."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, ACourseCanBeMovedAfterACancelledMove)
+{
+    m_courses->addCourse("a", "da", "x");
+    m_courses->addCourse("b", "db", "x");
+    m_courses->addCourse("c", "dc", "x");
+    FakeConsole console{"6", "3", "/c", "6", "3", "1", "", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_repository->listCourseIds(), (std::vector<int>{3, 1, 2}));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, CancelWhenTypingTheNewPositionOfAnExerciseMovesNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");
+    m_exercises->addExercise(1, "b", "bd", "x");
+    m_exercises->addExercise(1, "c", "cd", "x");
+    FakeConsole console{"1", "1", "6", "3", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 3u);
+    EXPECT_EQ(exercises[0].name, "a");
+    EXPECT_EQ(exercises[1].name, "b");
+    EXPECT_EQ(exercises[2].name, "c");
+    EXPECT_TRUE(contains(console.output(), "Current position: 3 of 3\n"));
+    EXPECT_FALSE(contains(console.output(), "Exercise moved successfully"));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, AnExerciseCanBeMovedAfterACancelledMove)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "a", "ad", "x");
+    m_exercises->addExercise(1, "b", "bd", "x");
+    m_exercises->addExercise(1, "c", "cd", "x");
+    FakeConsole console{"1", "1", "6", "3", "/c", "6", "3", "1", "", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    const auto exercises = m_repository->load(1).exercises;
+    ASSERT_EQ(exercises.size(), 3u);
+    EXPECT_EQ(exercises[0].name, "c");
+    EXPECT_EQ(exercises[1].name, "a");
+    EXPECT_EQ(exercises[2].name, "b");
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 1);
+}
+
+TEST_F(CliAppTests, CancelAtTheDefaultCourseMenuSavesNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    FakeConsole console{"2", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_FALSE(m_defaults->loadDefaultCourse().has_value());
+    EXPECT_TRUE(contains(console.output(), "Choose option [1-2]: "));
+    EXPECT_FALSE(contains(console.output(), "Default course set."));
+    EXPECT_FALSE(contains(console.output(), "Default course removed."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelAtTheDefaultCourseMenuKeepsTheCurrentDefault)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_defaults->saveDefaultCourse(1);
+    // The program starts in the default course, so "7" goes back to the courses screen first.
+    FakeConsole console{"7", "2", "/c", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_defaults->loadDefaultCourse(), 1);
+    EXPECT_FALSE(contains(console.output(), "Default course removed."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelAtTheDefaultExerciseMenuSavesNothing)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    FakeConsole console{"1", "1", "2", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_FALSE(m_defaults->loadDefaultExercise(1).has_value());
+    EXPECT_TRUE(contains(console.output(), "Choose option [1-2]: "));
+    EXPECT_FALSE(contains(console.output(), "Default exercise set."));
+    EXPECT_FALSE(contains(console.output(), "Default exercise removed."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}
+
+TEST_F(CliAppTests, CancelAtTheDefaultExerciseMenuKeepsTheCurrentDefault)
+{
+    m_courses->addCourse("first", "a", "b");
+    m_exercises->addExercise(1, "adder", "Adds", "full");
+    m_defaults->saveDefaultExercise(1, 1);
+    // Arriving at the course opens its default exercise first, so the first answer is "n".
+    FakeConsole console{"1", "1", "n", "2", "/c", "7", "7"};
+
+    EXPECT_EQ(runApp(console), 0);
+
+    EXPECT_EQ(m_defaults->loadDefaultExercise(1), 1);
+    EXPECT_FALSE(contains(console.output(), "Default exercise removed."));
+    EXPECT_EQ(countOccurrences(console.output(), "Press Enter to continue..."), 0);
+}

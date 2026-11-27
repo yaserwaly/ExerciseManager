@@ -163,6 +163,19 @@ std::optional<std::string> askTextOrKeep(IConsole& console, std::string_view pro
     return std::move(answer.value);
 }
 
+// Asks for a whole number in a range, and the user can cancel. Returns the number, or no value
+// if the user cancelled or the input ended. In both cases the caller stops its operation.
+std::optional<int> askNumber(IConsole& console, std::string_view prompt, int minValue, int maxValue)
+{
+    const CancellableInput<int> answer =
+        ConsoleUtils::readNumberOrCancel(console, prompt, minValue, maxValue);
+    if (answer.status != InputStatus::Value)
+    {
+        return std::nullopt;
+    }
+    return answer.value;
+}
+
 } // namespace
 
 CliApp::CliApp(IConsole& console, ICourseRepository& repository, CourseService& courses,
@@ -362,9 +375,9 @@ void CliApp::moveCourse(const std::vector<Course>& courses)
     m_console.writeLine("Current position: " + std::to_string(currentPosition) + " of " +
                         std::to_string(count));
 
-    // If the input ends in the middle, nothing is moved.
+        // If the user cancels, or the input ends in the middle, nothing is moved.
     const std::optional<int> newPosition =
-        ConsoleUtils::readNumber(m_console, "Enter new position: ", 1, count);
+        askNumber(m_console, "Enter new position: ", 1, count);
     if (!newPosition.has_value())
     {
         return;
@@ -421,7 +434,7 @@ void CliApp::setDefaultCourse(const std::vector<Course>& courses)
     m_console.writeLine(kLine);
 
     const std::optional<int> choice =
-        ConsoleUtils::readNumber(m_console, "Choose option [1-2]: ", 1, 2);
+        askNumber(m_console, "Choose option [1-2]: ", 1, 2);
     if (!choice.has_value())
     {
         return;
@@ -630,9 +643,9 @@ void CliApp::moveExercise(const Course& course)
     m_console.writeLine("Current position: " + std::to_string(currentPosition) + " of " +
                         std::to_string(count));
 
-    // If the input ends in the middle, nothing is moved.
+        // If the user cancels, or the input ends in the middle, nothing is moved.
     const std::optional<int> newPosition =
-        ConsoleUtils::readNumber(m_console, "Enter new position: ", 1, count);
+        askNumber(m_console, "Enter new position: ", 1, count);
     if (!newPosition.has_value())
     {
         return;
@@ -727,7 +740,7 @@ void CliApp::setDefaultExercise(const Course& course)
     m_console.writeLine(kLine);
 
     const std::optional<int> choice =
-        ConsoleUtils::readNumber(m_console, "Choose option [1-2]: ", 1, 2);
+        askNumber(m_console, "Choose option [1-2]: ", 1, 2);
     if (!choice.has_value())
     {
         return;
