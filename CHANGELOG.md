@@ -40,6 +40,10 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - `ICourseRepository::reorder` and `JsonCourseRepository::reorder`: store a new order of the courses. The list must match the stored courses exactly, otherwise `StorageError` is thrown and nothing is written.
 - New `InvalidPositionError`, thrown when a position is not between 1 and the number of items.
 - CLI: a `Move` option in the courses screen and in the course screen. It asks for the item and its new position, shows the current position, and shows a message when the item is already there.
+- Cancel word: typing `/c` (any letter case, spaces around it are ignored) at a question of an operation cancels the whole operation and goes back to the menu, with nothing changed on disk. It works when choosing a course or an exercise, when typing the name and the descriptions (add and update), when typing the new position (move) and when choosing option 1 or 2 (set default). The main menus and the yes/no questions do not use it.
+- Cancelling in the middle of an add or an update drops every field typed before it. It is handled before the services are called, so the Core never sees it.
+- `ConsoleUtils`: `readNumberOrCancel`, `readTextOrCancel` and `readTextOrKeepOrCancel` tell a cancel apart from the end of the input, using `InputStatus` and `CancellableInput<T>`. The existing helpers are not changed. The cancel word lives in one place (`kCancelInput`), with `cancelHint()` and `cancelNotice()` built from it.
+- Cancel hint: the questions that choose a course or an exercise show `(/c to cancel)`, and each add, update, move and set default screen shows `Type /c at any question to cancel.` once.
 
 ### Changed
 - Exercise number comment updated: deleted numbers are now reused.
@@ -47,3 +51,4 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - `Directory.Build.props` also adds the CLI include folder to every project.
 - `JsonCourseRepository::save` no longer sorts `Courses.json` by number: a new course goes to the end and an existing course keeps its position. `listCourseIds` and `CourseService::listCourses` return the stored order, and the CLI no longer sorts the exercises.
 - Menu option numbers changed: the courses screen has `Move` = 6 and `Exit` = 7, and the course screen has `Move` = 6, `Back to courses` = 7 and `Exit` = 8.
+- The questions that choose a course or an exercise now read `Enter course number (/c to cancel): ` and `Enter exercise number (/c to cancel): `.
