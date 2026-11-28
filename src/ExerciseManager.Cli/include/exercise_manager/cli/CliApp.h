@@ -67,7 +67,7 @@ class CliApp
     void addCourse();
     
     // Asks for one of the shown courses and returns its position in the list, or no value
-    // if there are no courses or the input ended.
+    // if there are no courses, the user cancelled, or the input ended.
     std::optional<std::size_t> pickCourse(const std::vector<Course>& courses);
 
     // Prints the details of one course: name, descriptions and its real folder.
@@ -96,7 +96,8 @@ class CliApp
     void addExercise(int courseId);
 
     // Asks for one of the shown exercises and returns its position in the list (the exercises
-    // must be in the order they are shown), or no value if there are none or the input ended.
+    // must be in the order they are shown), or no value if there are none, the user cancelled,
+    // or the input ended.
     std::optional<std::size_t> pickExercise(const Course& course);
 
     // Prints the details of one exercise: name, descriptions, class name and its real files.

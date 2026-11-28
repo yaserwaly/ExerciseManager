@@ -224,3 +224,209 @@ TEST(ConsoleUtilsTests, WaitForEnterShowsAnEmptyLineBeforeThePrompt)
 
     EXPECT_EQ(console.output(), "\nPress Enter to continue...");
 }
+
+// ---------- cancel word (opt-in) ----------
+
+using exercise_manager::cli::CancellableInput;
+using exercise_manager::cli::InputStatus;
+
+TEST(ConsoleUtilsTests, ReadNumberOrCancelReturnsNumberInsideRange)
+{
+    FakeConsole console{"3"};
+
+    const auto result = ConsoleUtils::readNumberOrCancel(console, "Choose: ", 1, 5);
+
+    EXPECT_EQ(result.status, InputStatus::Value);
+    EXPECT_EQ(result.value, 3);
+}
+
+TEST(ConsoleUtilsTests, ReadNumberOrCancelReturnsCancelledForTheCancelWord)
+{
+    FakeConsole console{"/c"};
+
+    EXPECT_EQ(ConsoleUtils::readNumberOrCancel(console, "Choose: ", 1, 5).status,
+              InputStatus::Cancelled);
+}
+
+TEST(ConsoleUtilsTests, ReadNumberOrCancelAcceptsTheCancelWordInAnyCase)
+{
+    FakeConsole console{"/C"};
+
+    EXPECT_EQ(ConsoleUtils::readNumberOrCancel(console, "Choose: ", 1, 5).status,
+              InputStatus::Cancelled);
+}
+
+TEST(ConsoleUtilsTests, ReadNumberOrCancelIgnoresSpacesAroundTheCancelWord)
+{
+    FakeConsole console{"  /c  "};
+
+    EXPECT_EQ(ConsoleUtils::readNumberOrCancel(console, "Choose: ", 1, 5).status,
+              InputStatus::Cancelled);
+}
+
+TEST(ConsoleUtilsTests, ReadNumberOrCancelReturnsEndOfInputWhenInputEnds)
+{
+    FakeConsole console;
+
+    EXPECT_EQ(ConsoleUtils::readNumberOrCancel(console, "Choose: ", 1, 5).status,
+              InputStatus::EndOfInput);
+}
+
+TEST(ConsoleUtilsTests, ReadNumberOrCancelAsksAgainAfterBadInput)
+{
+    FakeConsole console{"abc", "2"};
+
+    const auto result = ConsoleUtils::readNumberOrCancel(console, "Choose: ", 1, 5);
+
+    EXPECT_EQ(result.status, InputStatus::Value);
+    EXPECT_EQ(result.value, 2);
+    EXPECT_TRUE(
+        contains(console.output(), "Invalid input. Please enter a number between 1 and 5.\n"));
+}
+
+TEST(ConsoleUtilsTests, ReadNumberOrCancelCancelsAfterBadInput)
+{
+    FakeConsole console{"abc", "/c"};
+
+    EXPECT_EQ(ConsoleUtils::readNumberOrCancel(console, "Choose: ", 1, 5).status,
+              InputStatus::Cancelled);
+}
+
+TEST(ConsoleUtilsTests, ReadNumberOrCancelDoesNotShowAnErrorForTheCancelWord)
+{
+    FakeConsole console{"/c"};
+
+    ConsoleUtils::readNumberOrCancel(console, "Choose: ", 1, 5);
+
+    EXPECT_FALSE(contains(console.output(), "Invalid input"));
+}
+
+TEST(ConsoleUtilsTests, ReadNumberOrCancelDoesNotTreatLongerTextAsTheCancelWord)
+{
+    FakeConsole console{"/cx", "/c"};
+
+    EXPECT_EQ(ConsoleUtils::readNumberOrCancel(console, "Choose: ", 1, 5).status,
+              InputStatus::Cancelled);
+    EXPECT_TRUE(contains(console.output(), "Invalid input."));
+}
+
+TEST(ConsoleUtilsTests, ReadNumberStillTreatsTheCancelWordAsBadInput)
+{
+    FakeConsole console{"/c", "2"};
+
+    EXPECT_EQ(ConsoleUtils::readNumber(console, "Choose: ", 1, 5), 2);
+    EXPECT_TRUE(contains(console.output(), "Invalid input."));
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrCancelReturnsTheLineAsTyped)
+{
+    FakeConsole console{"  my name "};
+
+    const auto result = ConsoleUtils::readTextOrCancel(console, "Name: ");
+
+    EXPECT_EQ(result.status, InputStatus::Value);
+    EXPECT_EQ(result.value, "  my name ");
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrCancelAcceptsAnEmptyLine)
+{
+    FakeConsole console{""};
+
+    const auto result = ConsoleUtils::readTextOrCancel(console, "Name: ");
+
+    EXPECT_EQ(result.status, InputStatus::Value);
+    EXPECT_TRUE(result.value.empty());
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrCancelReturnsCancelledForTheCancelWord)
+{
+    FakeConsole console{" /C "};
+
+    EXPECT_EQ(ConsoleUtils::readTextOrCancel(console, "Name: ").status, InputStatus::Cancelled);
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrCancelReturnsEndOfInputWhenInputEnds)
+{
+    FakeConsole console;
+
+    EXPECT_EQ(ConsoleUtils::readTextOrCancel(console, "Name: ").status, InputStatus::EndOfInput);
+}
+
+TEST(ConsoleUtilsTests, ReadTextStillReturnsTheCancelWordAsText)
+{
+    FakeConsole console{"/c"};
+
+    EXPECT_EQ(ConsoleUtils::readText(console, "Name: "), "/c");
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrKeepOrCancelReturnsTheTypedText)
+{
+    FakeConsole console{"new"};
+
+    const auto result = ConsoleUtils::readTextOrKeepOrCancel(console, "Name", "old");
+
+    EXPECT_EQ(result.status, InputStatus::Value);
+    EXPECT_EQ(result.value, "new");
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrKeepOrCancelKeepsTheCurrentValueOnAnEmptyLine)
+{
+    FakeConsole console{""};
+
+    const auto result = ConsoleUtils::readTextOrKeepOrCancel(console, "Name", "old");
+
+    EXPECT_EQ(result.status, InputStatus::Value);
+    EXPECT_EQ(result.value, "old");
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrKeepOrCancelReturnsCancelledForTheCancelWord)
+{
+    FakeConsole console{"/c"};
+
+    EXPECT_EQ(ConsoleUtils::readTextOrKeepOrCancel(console, "Name", "old").status,
+              InputStatus::Cancelled);
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrKeepOrCancelReturnsEndOfInputWhenInputEnds)
+{
+    FakeConsole console;
+
+    EXPECT_EQ(ConsoleUtils::readTextOrKeepOrCancel(console, "Name", "old").status,
+              InputStatus::EndOfInput);
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrKeepOrCancelShowsTheCurrentValueInThePrompt)
+{
+    FakeConsole console{""};
+
+    ConsoleUtils::readTextOrKeepOrCancel(console, "Name", "old");
+
+    EXPECT_TRUE(contains(console.output(), "Name [old]: "));
+}
+
+TEST(ConsoleUtilsTests, ReadTextOrKeepStillReturnsTheCancelWordAsText)
+{
+    FakeConsole console{"/c"};
+
+    EXPECT_EQ(ConsoleUtils::readTextOrKeep(console, "Name", "old"), "/c");
+}
+
+TEST(ConsoleUtilsTests, CancelHintContainsTheCancelWord)
+{
+    EXPECT_TRUE(contains(ConsoleUtils::cancelHint(), std::string(ConsoleUtils::kCancelInput)));
+}
+
+TEST(ConsoleUtilsTests, CancelHintHasTheAgreedFormat)
+{
+    EXPECT_EQ(ConsoleUtils::cancelHint(), "(/c to cancel)");
+}
+
+TEST(ConsoleUtilsTests, CancelNoticeContainsTheCancelWord)
+{
+    EXPECT_TRUE(contains(ConsoleUtils::cancelNotice(), std::string(ConsoleUtils::kCancelInput)));
+}
+
+TEST(ConsoleUtilsTests, CancelNoticeHasTheAgreedFormat)
+{
+    EXPECT_EQ(ConsoleUtils::cancelNotice(), "Type /c at any question to cancel.");
+}

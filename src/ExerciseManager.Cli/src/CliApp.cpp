@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace exercise_manager::cli
@@ -114,7 +115,8 @@ DefaultExerciseCheck checkDefaultExercise(const DefaultsStore& defaults, const C
 
 // Asks for a position in a list that is shown numbered 1..N. The number typed is only the
 // position in the list, never the real course or exercise number.
-// Returns the position as a 0-based index, or no value if the list is empty or the input ended.
+// Returns the position as a 0-based index, or no value if the list is empty, the user
+// cancelled, or the input ended. In every "no value" case the caller stops its operation.
 std::optional<std::size_t> pickPosition(IConsole& console, std::size_t count,
                                         std::string_view emptyMessage, std::string_view prompt)
 {
@@ -125,13 +127,53 @@ std::optional<std::size_t> pickPosition(IConsole& console, std::size_t count,
         return std::nullopt;
     }
 
-    const std::optional<int> number =
-        ConsoleUtils::readNumber(console, prompt, 1, static_cast<int>(count));
-    if (!number.has_value())
+    const CancellableInput<int> answer =
+        ConsoleUtils::readNumberOrCancel(console, prompt, 1, static_cast<int>(count));
+    if (answer.status != InputStatus::Value)
+    {
+        // Cancelled, or the input ended: nothing is changed.
+        return std::nullopt;
+    }
+    return static_cast<std::size_t>(answer.value - 1);
+}
+
+// Asks for one line of text that can be cancelled. Returns the line as typed, or no value if
+// the user cancelled or the input ended. In both cases the caller stops its operation.
+std::optional<std::string> askText(IConsole& console, std::string_view prompt)
+{
+    CancellableInput<std::string> answer = ConsoleUtils::readTextOrCancel(console, prompt);
+    if (answer.status != InputStatus::Value)
     {
         return std::nullopt;
     }
-    return static_cast<std::size_t>(*number - 1);
+    return std::move(answer.value);
+}
+
+// Like askText, but an empty line keeps the current value (shown in the prompt).
+// Returns the new text, the current value, or no value if the user cancelled or the input ended.
+std::optional<std::string> askTextOrKeep(IConsole& console, std::string_view prompt,
+                                         std::string_view current)
+{
+    CancellableInput<std::string> answer =
+        ConsoleUtils::readTextOrKeepOrCancel(console, prompt, current);
+    if (answer.status != InputStatus::Value)
+    {
+        return std::nullopt;
+    }
+    return std::move(answer.value);
+}
+
+// Asks for a whole number in a range, and the user can cancel. Returns the number, or no value
+// if the user cancelled or the input ended. In both cases the caller stops its operation.
+std::optional<int> askNumber(IConsole& console, std::string_view prompt, int minValue, int maxValue)
+{
+    const CancellableInput<int> answer =
+        ConsoleUtils::readNumberOrCancel(console, prompt, minValue, maxValue);
+    if (answer.status != InputStatus::Value)
+    {
+        return std::nullopt;
+    }
+    return answer.value;
 }
 
 } // namespace
@@ -190,22 +232,23 @@ void CliApp::addCourse()
     m_console.clearScreen();
     m_console.writeLine(kLine);
     m_console.writeLine("               Add course");
+    m_console.writeLine(ConsoleUtils::cancelNotice());
     m_console.writeLine(kLine);
 
-    // If the input ends in the middle, nothing is added.
-    const std::optional<std::string> name = ConsoleUtils::readText(m_console, "Course name: ");
+    // If the user cancels, or the input ends in the middle, nothing is added.
+    const std::optional<std::string> name = askText(m_console, "Course name: ");
     if (!name.has_value())
     {
         return;
     }
     const std::optional<std::string> description =
-        ConsoleUtils::readText(m_console, "Short description: ");
+        askText(m_console, "Short description: ");
     if (!description.has_value())
     {
         return;
     }
     const std::optional<std::string> fullDescription =
-        ConsoleUtils::readText(m_console, "Full description: ");
+        askText(m_console, "Full description: ");
     if (!fullDescription.has_value())
     {
         return;
@@ -222,7 +265,7 @@ void CliApp::addCourse()
 std::optional<std::size_t> CliApp::pickCourse(const std::vector<Course>& courses)
 {
     return pickPosition(m_console, courses.size(), "There are no courses.",
-                        "Enter course number: ");
+                        "Enter course number " + ConsoleUtils::cancelHint() + ": ");
 }
 
 void CliApp::showCourseInfo(const Course& course)
@@ -284,23 +327,24 @@ void CliApp::updateCourse(const std::vector<Course>& courses)
     m_console.writeLine("              Update course");
     m_console.writeLine(kLine);
     showCourseInfo(course);
+    m_console.writeLine(ConsoleUtils::cancelNotice());
     m_console.writeLine("Press Enter to keep the current value.");
 
-    // If the input ends in the middle, nothing is changed.
+    // If the user cancels, or the input ends in the middle, nothing is changed.
     const std::optional<std::string> name =
-        ConsoleUtils::readTextOrKeep(m_console, "Course name", course.name);
+        askTextOrKeep(m_console, "Course name", course.name);
     if (!name.has_value())
     {
         return;
     }
     const std::optional<std::string> description =
-        ConsoleUtils::readTextOrKeep(m_console, "Short description", course.description);
+        askTextOrKeep(m_console, "Short description", course.description);
     if (!description.has_value())
     {
         return;
     }
     const std::optional<std::string> fullDescription =
-        ConsoleUtils::readTextOrKeep(m_console, "Full description", course.fullDescription);
+        askTextOrKeep(m_console, "Full description", course.fullDescription);
     if (!fullDescription.has_value())
     {
         return;
@@ -332,10 +376,11 @@ void CliApp::moveCourse(const std::vector<Course>& courses)
     showCourseInfo(course);
     m_console.writeLine("Current position: " + std::to_string(currentPosition) + " of " +
                         std::to_string(count));
+    m_console.writeLine(ConsoleUtils::cancelNotice());
 
-    // If the input ends in the middle, nothing is moved.
+        // If the user cancels, or the input ends in the middle, nothing is moved.
     const std::optional<int> newPosition =
-        ConsoleUtils::readNumber(m_console, "Enter new position: ", 1, count);
+        askNumber(m_console, "Enter new position: ", 1, count);
     if (!newPosition.has_value())
     {
         return;
@@ -362,6 +407,7 @@ void CliApp::setDefaultCourse(const std::vector<Course>& courses)
     m_console.clearScreen();
     m_console.writeLine(kLine);
     m_console.writeLine("           Set default course");
+    m_console.writeLine(ConsoleUtils::cancelNotice());
     m_console.writeLine(kLine);
 
     const DefaultCourseCheck check = checkDefaultCourse(m_defaults, courses);
@@ -392,7 +438,7 @@ void CliApp::setDefaultCourse(const std::vector<Course>& courses)
     m_console.writeLine(kLine);
 
     const std::optional<int> choice =
-        ConsoleUtils::readNumber(m_console, "Choose option [1-2]: ", 1, 2);
+        askNumber(m_console, "Choose option [1-2]: ", 1, 2);
     if (!choice.has_value())
     {
         return;
@@ -447,22 +493,23 @@ void CliApp::addExercise(int courseId)
     m_console.clearScreen();
     m_console.writeLine(kLine);
     m_console.writeLine("              Add exercise");
+    m_console.writeLine(ConsoleUtils::cancelNotice());
     m_console.writeLine(kLine);
 
-    // If the input ends in the middle, nothing is added.
-    const std::optional<std::string> name = ConsoleUtils::readText(m_console, "Exercise name: ");
+    // If the user cancels, or the input ends in the middle, nothing is added.
+    const std::optional<std::string> name = askText(m_console, "Exercise name: ");
     if (!name.has_value())
     {
         return;
     }
     const std::optional<std::string> description =
-        ConsoleUtils::readText(m_console, "Short description: ");
+        askText(m_console, "Short description: ");
     if (!description.has_value())
     {
         return;
     }
     const std::optional<std::string> fullDescription =
-        ConsoleUtils::readText(m_console, "Full description: ");
+        askText(m_console, "Full description: ");
     if (!fullDescription.has_value())
     {
         return;
@@ -479,7 +526,7 @@ void CliApp::addExercise(int courseId)
 std::optional<std::size_t> CliApp::pickExercise(const Course& course)
 {
     return pickPosition(m_console, course.exercises.size(), "There are no exercises.",
-                        "Enter exercise number: ");
+                        "Enter exercise number " + ConsoleUtils::cancelHint() + ": ");
 }
 
 void CliApp::showExerciseInfo(int courseId, const Exercise& exercise)
@@ -550,23 +597,24 @@ void CliApp::updateExercise(const Course& course)
     m_console.writeLine("             Update exercise");
     m_console.writeLine(kLine);
     showExerciseInfo(course.id, exercise);
+    m_console.writeLine(ConsoleUtils::cancelNotice());
     m_console.writeLine("Press Enter to keep the current value.");
 
-    // If the input ends in the middle, nothing is changed.
+    // If the user cancels, or the input ends in the middle, nothing is changed.
     const std::optional<std::string> name =
-        ConsoleUtils::readTextOrKeep(m_console, "Exercise name", exercise.name);
+        askTextOrKeep(m_console, "Exercise name", exercise.name);
     if (!name.has_value())
     {
         return;
     }
     const std::optional<std::string> description =
-        ConsoleUtils::readTextOrKeep(m_console, "Short description", exercise.description);
+        askTextOrKeep(m_console, "Short description", exercise.description);
     if (!description.has_value())
     {
         return;
     }
     const std::optional<std::string> fullDescription =
-        ConsoleUtils::readTextOrKeep(m_console, "Full description", exercise.fullDescription);
+        askTextOrKeep(m_console, "Full description", exercise.fullDescription);
     if (!fullDescription.has_value())
     {
         return;
@@ -600,10 +648,11 @@ void CliApp::moveExercise(const Course& course)
     showExerciseInfo(course.id, exercise);
     m_console.writeLine("Current position: " + std::to_string(currentPosition) + " of " +
                         std::to_string(count));
+    m_console.writeLine(ConsoleUtils::cancelNotice());
 
-    // If the input ends in the middle, nothing is moved.
+        // If the user cancels, or the input ends in the middle, nothing is moved.
     const std::optional<int> newPosition =
-        ConsoleUtils::readNumber(m_console, "Enter new position: ", 1, count);
+        askNumber(m_console, "Enter new position: ", 1, count);
     if (!newPosition.has_value())
     {
         return;
@@ -668,6 +717,7 @@ void CliApp::setDefaultExercise(const Course& course)
     m_console.clearScreen();
     m_console.writeLine(kLine);
     m_console.writeLine("          Set default exercise");
+    m_console.writeLine(ConsoleUtils::cancelNotice());
     m_console.writeLine(kLine);
 
     const DefaultExerciseCheck check = checkDefaultExercise(m_defaults, course);
@@ -698,7 +748,7 @@ void CliApp::setDefaultExercise(const Course& course)
     m_console.writeLine(kLine);
 
     const std::optional<int> choice =
-        ConsoleUtils::readNumber(m_console, "Choose option [1-2]: ", 1, 2);
+        askNumber(m_console, "Choose option [1-2]: ", 1, 2);
     if (!choice.has_value())
     {
         return;
